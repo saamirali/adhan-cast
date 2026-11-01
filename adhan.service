@@ -1,0 +1,20 @@
+[Unit]
+Description=Adhan service (prayer times -> Google Home / Chromecast)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=adhan
+Group=adhan
+WorkingDirectory=/opt/adhan-service
+Environment=ADHAN_DATA_DIR=/var/lib/adhan
+Environment=ADHAN_PORT=8080
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/adhan-service/venv/bin/python -m app.main
+Restart=on-failure
+RestartSec=5
+StateDirectory=adhan
+
+[Install]
+WantedBy=multi-user.target

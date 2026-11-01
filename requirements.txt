@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
+pychromecast>=14.0
+zeroconf>=0.130
+adhanpy>=1.0.5
+requests>=2.31
