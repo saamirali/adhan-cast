@@ -32,6 +32,20 @@ Dev run without installing: `ADHAN_MOCK_CAST=1 ./run-dev.sh` (mock logs casts in
 - Every prayer picker lists both, labelled 📁 file / 🔗 link. Links are stored in settings.json as `links: [{id,name,url}]` and referenced as
   `link:<id>`; old settings files (plain filenames, no `links`) keep working unchanged.
 
+## Pre-adhan reminders
+Settings (⚙️ button in the header) → **🔔 Reminders**: a global on/off switch (off by default after upgrade), default minutes before
+(15, range 1–120), a per-prayer on/off + optional minutes override, the reminder sound and its volume (or the global volume).
+- **Sound**: *Spoken announcement* (default) says e.g. “Dhuhr adhan in 15 minutes”. It is generated with Google Translate TTS,
+  downloaded once and cached in `<data>/tts/`, then served to speakers from this host (`/tts/…`). If the download fails, the speaker is
+  pointed at the Google TTS URL directly; if a chosen library item was deleted, it falls back to the spoken announcement.
+  Or pick any uploaded MP3 / link from the library.
+- Reminders cast to the same speakers as the adhan, are logged in Recent activity, and are tracked separately from the adhan so they never
+  block or replace it. A reminder whose time has already passed (service started late, PC woke from sleep) is skipped.
+- The prayer list and the hero show the reminder time (🔔). **▶ Test reminder** plays it now for the next prayer.
+- settings.json: `reminders: {enabled, minutes, sound: "tts"|<file>|"link:<id>", volume|null, language, prayers: {fajr: {enabled, minutes|null}, …}}`.
+  Older settings files get these defaults automatically. API: `POST /api/reminder/test {prayer, minutes?, sound?, volume?}`;
+  `GET /api/times` includes `reminders: {prayer: iso|null}`.
+
 ## Phone / home screen
 The UI is mobile-first (44px touch targets, 16px inputs so iOS doesn't zoom, safe-area aware, sticky header). Open it on your phone and use
 *Add to Home Screen* (iOS Safari / Android Chrome) – it ships a local web-app manifest and icon, no internet needed. Dark is the default;

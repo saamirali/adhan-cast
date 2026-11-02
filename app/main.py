@@ -1,6 +1,6 @@
 """Adhan service: local prayer times + cast adhan MP3s to Google Home / Chromecast."""
 from contextlib import asynccontextmanager
-import json, logging, os, re, socket, threading, time, uuid
+import hashlib, json, logging, os, re, socket, threading, time, uuid
 from collections import deque
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -37,7 +37,13 @@ DEFAULTS = {
     "speakers": [],               # [{"name": "...", "host": "192.168.x.y" or ""}]
     "default_media": "", "global_volume": 0.5,
     "prayers": {p: {"enabled": True, "media": "", "volume": None} for p in PRAYERS},
+    # pre-adhan reminders; "sound" is "tts" (spoken announcement) or a library ref (filename / link:<id>)
+    "reminders": {"enabled": False, "minutes": 15, "sound": "tts", "volume": None, "language": "en",
+                  "prayers": {p: {"enabled": True, "minutes": None} for p in PRAYERS}},
 }
+TTS_DIR = DATA_DIR / "tts"
+TTS_SOUND = "tts"
+REMINDER_MIN, REMINDER_MAX = 1, 120
 
 log = logging.getLogger("adhan")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -145,10 +151,10 @@ def discover_speakers(timeout=8):
 CAST_CALLS = []  # recorded in mock mode (used by tests)
 
 
-def cast_to(speaker, url, volume):
+def cast_to(speaker, url, volume, title="Adhan"):
     label = speaker.get("name") or speaker.get("host")
     if MOCK_CAST:
-        CAST_CALLS.append({"speaker": label, "url": url, "volume": volume})
+        CAST_CALLS.append({"speaker": label, "url": url, "volume": volume, "title": title})
         event("play", f"[mock] cast {url} to {label} at volume {volume}")
         return
     import pychromecast
@@ -170,7 +176,7 @@ def cast_to(speaker, url, volume):
         if volume is not None:
             cc.set_volume(float(volume))
         mc = cc.media_controller
-        mc.play_media(url, "audio/mpeg", title="Adhan")
+        mc.play_media(url, "audio/mpeg", title=title)
         mc.block_until_active(timeout=15)
         event("play", f"Casting {url} to {label} (vol {volume})")
         cc.disconnect(timeout=5)
@@ -236,6 +242,79 @@ def play(prayer=None, media=None, speakers=None, volume=None):
     return True
 
 
+# ---------- reminders ----------
+def reminder_minutes(prayer, s=None):
+    """Minutes before adhan for this prayer, or None if reminders are off for it."""
+    s = s or load_settings()
+    r = s["reminders"]
+    cfg = r["prayers"].get(prayer) or {}
+    if not r.get("enabled") or not cfg.get("enabled", True):
+        return None
+    m = cfg.get("minutes")
+    return int(m) if m not in (None, "") else int(r["minutes"])
+
+
+def reminder_text(prayer, minutes):
+    return f"{prayer.capitalize()} adhan in {minutes} minute{'' if minutes == 1 else 's'}"
+
+
+def google_tts_url(text, lang="en"):
+    return ("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl="
+            f"{requests.utils.quote(lang)}&q={requests.utils.quote(text)}")
+
+
+def fetch_tts(text, lang="en"):
+    """Download spoken MP3 bytes from Google Translate TTS (monkeypatched in tests)."""
+    r = requests.get(google_tts_url(text, lang), timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+    r.raise_for_status()
+    if not r.content or "audio" not in r.headers.get("content-type", "audio"):
+        raise RuntimeError(f"unexpected content-type {r.headers.get('content-type')}")
+    return r.content
+
+
+def tts_media_url(text, s=None):
+    """Returns (url, label). Prefers a locally cached copy served from this host (speakers on the LAN can always
+    reach it); falls back to the direct Google URL if download fails; (None, reason) only if nothing works."""
+    s = s or load_settings()
+    lang = s["reminders"].get("language") or "en"
+    name = hashlib.sha1(f"{lang}|{text}".encode()).hexdigest()[:16] + ".mp3"
+    path = TTS_DIR / name
+    if not path.exists():
+        try:
+            data = fetch_tts(text, lang)
+            TTS_DIR.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        except Exception as e:
+            event("error", f"TTS download failed ({e}); speaker will fetch Google TTS directly")
+            return google_tts_url(text, lang), f"spoken '{text}' (direct)"
+    return f"http://{lan_ip(s)}:{s['port']}/tts/{name}", f"spoken '{text}'"
+
+
+def play_reminder(prayer, minutes=None, sound=None, speakers=None, volume=None):
+    s = load_settings()
+    r = s["reminders"]
+    minutes = int(minutes if minutes is not None else (reminder_minutes(prayer, s) or r["minutes"]))
+    sound = sound or r.get("sound") or TTS_SOUND
+    if volume is None:
+        volume = r["volume"] if r.get("volume") is not None else s["global_volume"]
+    speakers = speakers or s["speakers"]
+    text = reminder_text(prayer, minutes)
+    if not speakers:
+        event("error", f"Reminder {prayer}: no speakers selected")
+        return False
+    url = None
+    if sound != TTS_SOUND:
+        url, label = resolve_media(sound, s)
+        if not url:
+            event("error", f"Reminder {prayer}: {label}; falling back to spoken announcement")
+    if not url:
+        url, label = tts_media_url(text, s)
+    event("reminder", f"Reminder: {text} - playing {label} on {len(speakers)} speaker(s)")
+    for sp in speakers:
+        threading.Thread(target=cast_to, args=(sp, url, volume, "Adhan reminder"), daemon=True).start()
+    return True
+
+
 # ---------- scheduler ----------
 class Scheduler(threading.Thread):
     """Checks every few seconds; fires any enabled prayer whose time passed since last check.
@@ -255,13 +334,29 @@ class Scheduler(threading.Thread):
         last = self.last or now - timedelta(seconds=self.interval)
         if now - last > timedelta(minutes=5):  # suspend/clock jump: don't fire stale adhans
             last = now - timedelta(seconds=self.interval)
-        for d in {last.date(), now.date()}:
+        for d in sorted({last.date(), now.date()}):
             t = compute_times(d, s)
             for p in PRAYERS:
                 key = (d.isoformat(), p)
                 if last < t[p] <= now and key not in self.fired and s["prayers"][p]["enabled"]:
                     self.fired.add(key)
                     play(prayer=p)
+        # reminders: separate keys so they never block/duplicate the adhan; a reminder whose time is
+        # already past (e.g. service started late) is simply skipped because it is outside (last, now].
+        if s["reminders"].get("enabled"):
+            for d in sorted({last.date(), now.date(), now.date() + timedelta(days=1)}):
+                t = compute_times(d, s)
+                for p in PRAYERS:
+                    m = reminder_minutes(p, s)
+                    if m is None:
+                        continue
+                    key = (d.isoformat(), "reminder:" + p)
+                    if last < t[p] - timedelta(minutes=m) <= now and key not in self.fired:
+                        self.fired.add(key)
+                        try:
+                            play_reminder(p, minutes=m)
+                        except Exception as e:
+                            event("error", f"Reminder {p} failed: {e}")
         self.fired = {k for k in self.fired if k[0] >= (now.date() - timedelta(days=1)).isoformat()}
         self.last = now
 
@@ -313,6 +408,14 @@ def media(name: str):
     return FileResponse(p, media_type="audio/mpeg")
 
 
+@app.get("/tts/{name}")
+def tts_file(name: str):
+    p = (TTS_DIR / name).resolve()
+    if p.parent != TTS_DIR.resolve() or not p.exists():
+        raise HTTPException(404)
+    return FileResponse(p, media_type="audio/mpeg")
+
+
 @app.get("/api/times")
 def api_times(day: str = None):
     s = load_settings()
@@ -328,6 +431,8 @@ def api_times(day: str = None):
     return {"date": d.isoformat(), "timezone": s["timezone"], "location": s["location_name"], "source": t["_source"],
             "method": s["method"], "madhab": s["madhab"], "now": now.isoformat(timespec="seconds"),
             "times": {p: t[p].isoformat() for p in PRAYERS + ["sunrise"]},
+            "reminders": {p: ((t[p] - timedelta(minutes=m)).isoformat() if (m := reminder_minutes(p, s)) is not None else None)
+                          for p in PRAYERS},
             "next": {"prayer": nxt[0], "time": nxt[1].isoformat(), "seconds": int((nxt[1] - now).total_seconds())} if nxt else None}
 
 
@@ -344,6 +449,22 @@ def put_settings(new: dict):
         ZoneInfo(s["timezone"]); METHODS[s["method"]]; Madhab[s["madhab"]]
         s["latitude"], s["longitude"] = float(s["latitude"]), float(s["longitude"])
         s["global_volume"] = min(1.0, max(0.0, float(s["global_volume"])))
+        r = s["reminders"]
+        r["enabled"] = bool(r["enabled"])
+        r["minutes"] = int(r["minutes"])
+        if not REMINDER_MIN <= r["minutes"] <= REMINDER_MAX:
+            raise ValueError(f"reminder minutes must be {REMINDER_MIN}-{REMINDER_MAX}")
+        r["volume"] = None if r.get("volume") in (None, "") else min(1.0, max(0.0, float(r["volume"])))
+        r["sound"] = str(r.get("sound") or TTS_SOUND)
+        for p in PRAYERS:
+            pc = r["prayers"].setdefault(p, {"enabled": True, "minutes": None})
+            pc["enabled"] = bool(pc.get("enabled", True))
+            if pc.get("minutes") in (None, ""):
+                pc["minutes"] = None
+            else:
+                pc["minutes"] = int(pc["minutes"])
+                if not REMINDER_MIN <= pc["minutes"] <= REMINDER_MAX:
+                    raise ValueError(f"{p} reminder minutes must be {REMINDER_MIN}-{REMINDER_MAX}")
     except Exception as e:
         raise HTTPException(400, f"invalid settings: {e}")
     save_settings(s)
@@ -390,6 +511,8 @@ def delete_media(name: str):
     for cfg in s["prayers"].values():
         if cfg.get("media") == name:
             cfg["media"] = ""
+    if s["reminders"].get("sound") == name:
+        s["reminders"]["sound"] = TTS_SOUND
     save_settings(s)
     event("info", f"Deleted {name}")
     return {"ok": True}
@@ -434,6 +557,8 @@ def delete_link(link_id: str):
     for cfg in s["prayers"].values():
         if cfg.get("media") == ref:
             cfg["media"] = ""
+    if s["reminders"].get("sound") == ref:
+        s["reminders"]["sound"] = TTS_SOUND
     save_settings(s)
     event("info", f"Deleted link {link_id}")
     return {"ok": True}
@@ -453,6 +578,17 @@ def api_test(body: dict = None):
     body = body or {}
     ok = play(prayer=body.get("prayer"), media=body.get("media"), speakers=body.get("speakers"), volume=body.get("volume"))
     return {"ok": ok}
+
+
+@app.post("/api/reminder/test")
+def api_test_reminder(body: dict = None):
+    body = body or {}
+    prayer = body.get("prayer") or "dhuhr"
+    if prayer not in PRAYERS:
+        raise HTTPException(400, "unknown prayer")
+    ok = play_reminder(prayer, minutes=body.get("minutes"), sound=body.get("sound"),
+                       speakers=body.get("speakers"), volume=body.get("volume"))
+    return {"ok": ok, "text": reminder_text(prayer, int(body.get("minutes") or reminder_minutes(prayer) or load_settings()["reminders"]["minutes"]))}
 
 
 @app.post("/api/stop")

@@ -64,6 +64,15 @@ audio{height:34px;max-width:220px;width:100%}
 details summary{cursor:pointer;font-weight:650;font-size:.95rem;list-style:none}details summary::-webkit-details-marker{display:none}
 details summary::after{content:"▾";float:right;color:var(--muted);transition:.2s}details[open] summary::after{transform:rotate(180deg)}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(100px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.88rem;transition:.3s;z-index:9;max-width:90vw}.toast.show{transform:translateX(-50%)}
+.rem{display:block;font-size:.74rem;color:var(--muted);font-weight:500;margin-top:1px}
+.rlist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.rrow{display:grid;grid-template-columns:1fr 96px auto;gap:10px;align-items:center;padding:6px 12px;border-radius:12px;background:var(--card2)}
+.rrow.off .pn{opacity:.45}.rrow .pn{font-weight:600}
+.rhead{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:4px 0 10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+section[id]{scroll-margin-top:80px}
+.sh{margin:4px 0 10px;font-size:.9rem;font-weight:650;display:flex;align-items:center;gap:8px}
+.ssec{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+#log .reminder{color:var(--warn)}
 .sticky{position:sticky;bottom:12px;display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 
 /* mobile-first hardening */
@@ -99,7 +108,7 @@ input[type=file]{padding:10px;min-height:48px}input[type=file]::file-selector-bu
 @media(max-width:600px){.lib .act .btns{flex:1 1 100%}.lib .act .btns button{flex:1}}
 </style></head><body><div class="wrap">
 <div class="top"><div class="brand"><div class="logo">☾</div><div><h1>Adhan</h1><div class="sub" id="loc">…</div></div></div>
-<button class="ghost sm" id="theme" onclick="toggleTheme()" aria-label="Toggle theme"></button></div>
+<div class="row" style="flex-wrap:nowrap"><button class="ghost sm" onclick="openSettings()" aria-label="Settings" title="Settings">⚙️</button><button class="ghost sm" id="theme" onclick="toggleTheme()" aria-label="Toggle theme"></button></div></div>
 <div class="grid">
 <section class="card hero span2"><div class="ring"><svg viewBox="0 0 150 150"><circle cx="75" cy="75" r="66" stroke="var(--line)" stroke-width="9" fill="none"/><circle id="arc" cx="75" cy="75" r="66" stroke="var(--accent)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="414.7" style="transition:stroke-dashoffset 1s linear"/></svg><div class="c"><div><div class="cd" id="countdown">--:--:--</div><div class="muted">remaining</div></div></div></div>
 <div style="position:relative;z-index:1"><div class="lbl">Next prayer</div><div class="name" id="nextname">—</div><div class="at" id="nextat"></div>
@@ -126,7 +135,17 @@ input[type=file]{padding:10px;min-height:48px}input[type=file]::file-selector-bu
 <label class="f">Global volume <span id="gv"></span><input type="range" min="0" max="1" step="0.05" id="global_volume"></label></div>
 <div class="sticky"><button onclick="saveAll()">Save</button></div></section>
 
-<section class="card"><details><summary>⚙️ Location, method &amp; network</summary><div style="margin-top:14px" class="fg">
+<section class="card span2" id="settings"><h2>⚙️ Settings</h2>
+<div id="reminders"><h3 class="sh">🔔 Reminders <span class="muted" style="margin-left:auto;font-weight:400">before each adhan</span></h3>
+<div class="rhead"><div><b>Pre-adhan reminder</b><div class="muted">e.g. “Dhuhr adhan in 15 minutes”, on the same speakers</div></div><label class="sw" title="Enable reminders"><input type="checkbox" id="r_enabled" onchange="$('rbody').style.opacity=this.checked?1:.5"><span></span></label></div>
+<div id="rbody"><div class="fg"><label class="f">Minutes before (1–120)<input id="r_minutes" type="number" min="1" max="120" inputmode="numeric"></label>
+<label class="f">Reminder sound<select id="r_sound"></select></label>
+<label class="f">Reminder volume <span id="rv"></span><input type="range" min="0" max="1" step="0.05" id="r_volume"></label></div>
+<div class="muted" style="margin-top:6px"><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="r_volglobal" style="width:auto;min-height:0"> Use global volume</label></div>
+<div class="rlist" id="rlist"></div></div>
+<div class="sticky"><button class="ghost" onclick="testReminder()">▶ Test reminder</button><button onclick="saveAll()">Save</button></div></div>
+
+<details id="setdet" class="ssec"><summary>📍 Location, method &amp; network</summary><div style="margin-top:14px" class="fg">
 <label class="f">Location name<input id="location_name"></label><label class="f">Latitude<input id="latitude" inputmode="decimal"></label><label class="f">Longitude<input id="longitude" inputmode="decimal"></label>
 <label class="f">Timezone<input id="timezone"></label><label class="f">Method<select id="method"></select></label>
 <label class="f">Asr<select id="madhab"><option value="HANAFI">Hanafi (later)</option><option value="SHAFI">Shafi / standard</option></select></label>
@@ -151,12 +170,12 @@ function options(sel,blank){const L=S.links||[];return (blank?`<option value="">
  (L.length?`<optgroup label="Audio links">${L.map(l=>`<option value="link:${l.id}" ${'link:'+l.id==sel?'selected':''}>🔗 ${esc(l.name)}</option>`).join('')}</optgroup>`:'')}
 function renderPrayers(){if(!T||!S.prayers)return;const nx=T.next&&T.next.time.slice(0,10)==T.date?T.next.prayer:null;
  $('plist').innerHTML=['fajr','sunrise',...P.slice(1)].map(p=>{if(p=='sunrise')return `<div class="prow sun"><div class="pn muted">☀ Sunrise</div><div class="pt muted">${fmt(T.times.sunrise)}</div></div>`;
- const c=S.prayers[p];return `<div class="prow ${p==nx?'next':''} ${c.enabled?'':'off'}" id="row_${p}"><div class="pn">${cap(p)} ${p==nx?'<span class="tag">Next</span>':''}</div><div class="pt">${fmt(T.times[p])}</div>
+ const c=S.prayers[p],rt=T.reminders&&T.reminders[p];return `<div class="prow ${p==nx?'next':''} ${c.enabled?'':'off'}" id="row_${p}"><div class="pn">${cap(p)} ${p==nx?'<span class="tag">Next</span>':''}${rt?`<span class="rem">🔔 ${fmt(rt)}</span>`:''}</div><div class="pt">${fmt(T.times[p])}</div>
  <label class="sw" title="Enable adhan"><input type="checkbox" id="en_${p}" ${c.enabled?'checked':''} onchange="$('row_${p}').classList.toggle('off',!this.checked)"><span></span></label>
  <div class="opts"><select id="md_${p}" aria-label="${p} adhan">${options(c.media,'Default adhan')}</select><input id="vo_${p}" type="number" min="0" max="100" placeholder="Vol %" title="Volume %, blank = global" value="${c.volume==null?'':Math.round(c.volume*100)}"><button class="ghost sm" onclick="test('${p}')">▶ Test</button></div></div>`}).join('')}
 async function loadTimes(){T=await api('/api/times');$('loc').textContent=`${T.location} · ${new Date(T.date+'T12:00').toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'})}`;
  $('src').textContent=`${T.method.replace(/_/g,' ').toLowerCase()} · Asr ${T.madhab.toLowerCase()}`;
- if(T.next){nextAt=Date.now()+T.next.seconds*1000;$('nextname').textContent=cap(T.next.prayer);$('nextat').textContent=fmt(T.next.time)+(T.next.time.slice(0,10)!=T.date?' · tomorrow':'');
+ if(T.next){nextAt=Date.now()+T.next.seconds*1000;$('nextname').textContent=cap(T.next.prayer);const rt=T.next.time.slice(0,10)==T.date&&T.reminders&&T.reminders[T.next.prayer];$('nextat').innerHTML=esc(fmt(T.next.time)+(T.next.time.slice(0,10)!=T.date?' · tomorrow':''))+(rt?` <span class="muted">· 🔔 ${esc(fmt(rt))}</span>`:'');
   const order=P.map(p=>new Date(T.times[p]).getTime()),nt=new Date(T.next.time).getTime(),prev=order.filter(x=>x<nt).pop()??(new Date(T.times.isha).getTime());span=Math.max(60000,nt-prev)}
  renderPrayers()}
 function tick(){if(!nextAt)return;const ms=Math.max(0,nextAt-Date.now()),s=Math.round(ms/1000);if(s==0)setTimeout(loadTimes,3000);
@@ -172,11 +191,20 @@ function render(){$('default_media').innerHTML=options(S.default_media,'— none
  $('method').innerHTML=S.methods.map(m=>`<option value="${m}" ${m==S.method?'selected':''}>${m.replace(/_/g,' ')}${m=='NORTH_AMERICA'?' (ISNA)':''}</option>`).join('');
  $('host_ip_override').placeholder='auto: '+S.detected_ip;$('ipinfo').textContent=`Speakers fetch uploads from http://${S.host_ip_override||S.detected_ip}:${S.port}/media/…`+(S.mock?' · MOCK CAST MODE':'');
  $('selected').innerHTML=S.speakers.map((s,i)=>`<div class="item">🔊<div class="meta"><b>${esc(s.name||s.host)}</b><span class="muted">${esc(s.host||'by name')}</span></div><button class="danger sm" onclick="S.speakers.splice(${i},1);saveAll()">Remove</button></div>`).join('')||'<div class="muted">None selected yet.</div>';
- renderLibrary();renderPrayers()}
+ renderLibrary();renderPrayers();renderReminders()}
+function renderReminders(){const R=S.reminders;$('r_enabled').checked=R.enabled;$('rbody').style.opacity=R.enabled?1:.5;$('r_minutes').value=R.minutes;
+ $('r_sound').innerHTML=`<option value="tts" ${R.sound=='tts'?'selected':''}>🗣 Spoken announcement</option>`+options(R.sound);
+ $('r_volglobal').checked=R.volume==null;$('r_volume').value=R.volume??S.global_volume;$('r_volume').disabled=R.volume==null;$('rv').textContent=Math.round((R.volume??S.global_volume)*100)+'%';
+ $('rlist').innerHTML=P.map(p=>{const c=R.prayers[p];return `<div class="rrow ${c.enabled?'':'off'}" id="rr_${p}"><div class="pn">${cap(p)}</div><input id="rm_${p}" type="number" min="1" max="120" placeholder="${R.minutes} min" title="Minutes override, blank = default" value="${c.minutes??''}"><label class="sw" title="Remind before ${p}"><input type="checkbox" id="re_${p}" ${c.enabled?'checked':''} onchange="$('rr_${p}').classList.toggle('off',!this.checked)"><span></span></label></div>`}).join('')}
+function collectReminders(){const R=S.reminders,m=parseInt($('r_minutes').value);R.enabled=$('r_enabled').checked;R.minutes=Math.min(120,Math.max(1,isNaN(m)?15:m));R.sound=$('r_sound').value||'tts';
+ R.volume=$('r_volglobal').checked?null:+$('r_volume').value;P.forEach(p=>{const v=$('rm_'+p).value;R.prayers[p]={enabled:$('re_'+p).checked,minutes:v===''?null:Math.min(120,Math.max(1,parseInt(v)))}})}
+async function testReminder(){collectReminders();const nx=T&&T.next?T.next.prayer:'dhuhr',R=S.reminders,m=R.prayers[nx].minutes??R.minutes;
+ const r=await api('/api/reminder/test',J({prayer:nx,minutes:m,sound:R.sound,volume:R.volume}));toast(r.ok?'🔔 '+r.text:'⚠ Check the activity log');setTimeout(loadLog,1200)}
+function openSettings(){$('setdet').open=true;$('settings').scrollIntoView({behavior:'smooth',block:'start'})}
 async function loadAll(){M=await api('/api/media');S=await api('/api/settings');render()}
 function collect(){P.forEach(p=>{if(!$('en_'+p))return;const v=$('vo_'+p).value;S.prayers[p]={enabled:$('en_'+p).checked,media:$('md_'+p).value,volume:v===''?null:Math.min(100,Math.max(0,v))/100}});
  S.default_media=$('default_media').value;S.global_volume=+$('global_volume').value;
- ['location_name','timezone','method','madhab','source','host_ip_override'].forEach(k=>S[k]=$(k).value.trim());S.latitude=+$('latitude').value;S.longitude=+$('longitude').value}
+ ['location_name','timezone','method','madhab','source','host_ip_override'].forEach(k=>S[k]=$(k).value.trim());S.latitude=+$('latitude').value;S.longitude=+$('longitude').value;if(S.reminders&&$('r_minutes'))collectReminders()}
 async function saveAll(){collect();const {methods,detected_ip,mock,...body}=S;S=await api('/api/settings',{...J(body),method:'PUT'});render();await loadTimes();loadLog();toast('✓ Saved')}
 async function upload(){const f=$('file').files[0];if(!f)return toast('Choose an MP3 first');const fd=new FormData();fd.append('file',f);await api('/api/media',{method:'POST',body:fd});$('file').value='';await loadAll();loadLog();toast('✓ Uploaded '+f.name)}
 async function delMedia(n){if(!confirm('Delete '+n+'?'))return;await api('/api/media/'+encodeURIComponent(n),{method:'DELETE'});await loadAll();loadLog()}
@@ -192,6 +220,7 @@ async function test(p){const r=await api('/api/test',J(p?{prayer:p}:{}));toast(r
 async function testMedia(m){const r=await api('/api/test',J({media:m}));toast(r.ok?'▶ Sent to speakers':'⚠ Check the activity log');setTimeout(loadLog,1200)}
 async function stopAll(){await api('/api/stop',{method:'POST'});toast('■ Stopped')}
 async function loadLog(){const l=await api('/api/log');$('log').innerHTML=l.slice(0,60).map(e=>`<div><span class="t">${e.time.slice(5,16).replace('T',' ')}</span><span class="${e.kind}">${esc(e.msg)}</span></div>`).join('')||'<div class="muted">Nothing yet.</div>'}
+$('r_volume').oninput=e=>$('rv').textContent=Math.round(e.target.value*100)+'%';$('r_volglobal').onchange=e=>{$('r_volume').disabled=e.target.checked};
 $('global_volume').oninput=e=>$('gv').textContent=Math.round(e.target.value*100)+'%';setThemeLbl();
 (async()=>{await loadAll();await loadTimes();loadLog();setInterval(tick,1000);tick();setInterval(loadLog,15000);setInterval(loadTimes,600000)})();
 </script></body></html>
