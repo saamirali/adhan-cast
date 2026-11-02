@@ -145,6 +145,15 @@ input[type=file]{padding:10px;min-height:48px}input[type=file]::file-selector-bu
 <div class="rlist" id="rlist"></div></div>
 <div class="sticky"><button class="ghost" onclick="testReminder()">▶ Test reminder</button><button onclick="saveAll()">Save</button></div></div>
 
+<div id="afterad" class="ssec"><h3 class="sh">🤲 After adhan <span class="muted" style="margin-left:auto;font-weight:400">e.g. dua after adhan</span></h3>
+<div class="rhead"><div><b>Play after the adhan</b><div class="muted">Starts on the same speakers once the adhan finishes; skipped if you press Stop</div></div><label class="sw" title="Enable after-adhan"><input type="checkbox" id="a_enabled" onchange="$('abody').style.opacity=this.checked?1:.5"><span></span></label></div>
+<div id="abody"><div class="fg"><label class="f">Play<select id="a_media"></select></label>
+<label class="f">Gap after adhan (seconds)<input id="a_gap" type="number" min="0" max="60" inputmode="numeric"></label>
+<label class="f">Volume <span id="av"></span><input type="range" min="0" max="1" step="0.05" id="a_volume"></label></div>
+<div class="muted" style="margin-top:6px"><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="a_volglobal" style="width:auto;min-height:0"> Use global volume</label></div>
+<div class="rlist" id="alist"></div></div>
+<div class="sticky"><button class="ghost" onclick="testAfter()">▶ Test</button><button onclick="saveAll()">Save</button></div></div>
+
 <details id="setdet" class="ssec"><summary>📍 Location, method &amp; network</summary><div style="margin-top:14px" class="fg">
 <label class="f">Location name<input id="location_name"></label><label class="f">Latitude<input id="latitude" inputmode="decimal"></label><label class="f">Longitude<input id="longitude" inputmode="decimal"></label>
 <label class="f">Timezone<input id="timezone"></label><label class="f">Method<select id="method"></select></label>
@@ -191,7 +200,14 @@ function render(){$('default_media').innerHTML=options(S.default_media,'— none
  $('method').innerHTML=S.methods.map(m=>`<option value="${m}" ${m==S.method?'selected':''}>${m.replace(/_/g,' ')}${m=='NORTH_AMERICA'?' (ISNA)':''}</option>`).join('');
  $('host_ip_override').placeholder='auto: '+S.detected_ip;$('ipinfo').textContent=`Speakers fetch uploads from http://${S.host_ip_override||S.detected_ip}:${S.port}/media/…`+(S.mock?' · MOCK CAST MODE':'');
  $('selected').innerHTML=S.speakers.map((s,i)=>`<div class="item">🔊<div class="meta"><b>${esc(s.name||s.host)}</b><span class="muted">${esc(s.host||'by name')}</span></div><button class="danger sm" onclick="S.speakers.splice(${i},1);saveAll()">Remove</button></div>`).join('')||'<div class="muted">None selected yet.</div>';
- renderLibrary();renderPrayers();renderReminders()}
+ renderLibrary();renderPrayers();renderReminders();renderAfter()}
+function renderAfter(){const A=S.after_adhan;$('a_enabled').checked=A.enabled;$('abody').style.opacity=A.enabled?1:.5;$('a_media').innerHTML=options(A.media,'— choose from library —');$('a_gap').value=A.gap;
+ $('a_volglobal').checked=A.volume==null;$('a_volume').value=A.volume??S.global_volume;$('a_volume').disabled=A.volume==null;$('av').textContent=Math.round((A.volume??S.global_volume)*100)+'%';
+ $('alist').innerHTML=P.map(p=>`<div class="rrow ${A.prayers[p]?'':'off'}" id="ar_${p}" style="grid-template-columns:1fr auto"><div class="pn">${cap(p)}</div><label class="sw" title="After ${p}"><input type="checkbox" id="ae_${p}" ${A.prayers[p]?'checked':''} onchange="$('ar_${p}').classList.toggle('off',!this.checked)"><span></span></label></div>`).join('')}
+function collectAfter(){const A=S.after_adhan,g=parseInt($('a_gap').value);A.enabled=$('a_enabled').checked;A.media=$('a_media').value;A.gap=Math.min(60,Math.max(0,isNaN(g)?2:g));
+ A.volume=$('a_volglobal').checked?null:+$('a_volume').value;P.forEach(p=>A.prayers[p]=$('ae_'+p).checked)}
+async function testAfter(){collectAfter();if(!S.after_adhan.media)return toast('Choose an item from the library first');
+ const r=await api('/api/after/test',J({media:S.after_adhan.media,volume:S.after_adhan.volume}));toast(r.ok?'▶ Sent to speakers':'⚠ Check the activity log');setTimeout(loadLog,1200)}
 function renderReminders(){const R=S.reminders;$('r_enabled').checked=R.enabled;$('rbody').style.opacity=R.enabled?1:.5;$('r_minutes').value=R.minutes;
  $('r_sound').innerHTML=`<option value="tts" ${R.sound=='tts'?'selected':''}>🗣 Spoken announcement</option>`+options(R.sound);
  $('r_volglobal').checked=R.volume==null;$('r_volume').value=R.volume??S.global_volume;$('r_volume').disabled=R.volume==null;$('rv').textContent=Math.round((R.volume??S.global_volume)*100)+'%';
@@ -204,7 +220,7 @@ function openSettings(){$('setdet').open=true;$('settings').scrollIntoView({beha
 async function loadAll(){M=await api('/api/media');S=await api('/api/settings');render()}
 function collect(){P.forEach(p=>{if(!$('en_'+p))return;const v=$('vo_'+p).value;S.prayers[p]={enabled:$('en_'+p).checked,media:$('md_'+p).value,volume:v===''?null:Math.min(100,Math.max(0,v))/100}});
  S.default_media=$('default_media').value;S.global_volume=+$('global_volume').value;
- ['location_name','timezone','method','madhab','source','host_ip_override'].forEach(k=>S[k]=$(k).value.trim());S.latitude=+$('latitude').value;S.longitude=+$('longitude').value;if(S.reminders&&$('r_minutes'))collectReminders()}
+ ['location_name','timezone','method','madhab','source','host_ip_override'].forEach(k=>S[k]=$(k).value.trim());S.latitude=+$('latitude').value;S.longitude=+$('longitude').value;if(S.reminders&&$('r_minutes'))collectReminders();if(S.after_adhan&&$('a_gap'))collectAfter()}
 async function saveAll(){collect();const {methods,detected_ip,mock,...body}=S;S=await api('/api/settings',{...J(body),method:'PUT'});render();await loadTimes();loadLog();toast('✓ Saved')}
 async function upload(){const f=$('file').files[0];if(!f)return toast('Choose an MP3 first');const fd=new FormData();fd.append('file',f);await api('/api/media',{method:'POST',body:fd});$('file').value='';await loadAll();loadLog();toast('✓ Uploaded '+f.name)}
 async function delMedia(n){if(!confirm('Delete '+n+'?'))return;await api('/api/media/'+encodeURIComponent(n),{method:'DELETE'});await loadAll();loadLog()}
@@ -220,6 +236,7 @@ async function test(p){const r=await api('/api/test',J(p?{prayer:p}:{}));toast(r
 async function testMedia(m){const r=await api('/api/test',J({media:m}));toast(r.ok?'▶ Sent to speakers':'⚠ Check the activity log');setTimeout(loadLog,1200)}
 async function stopAll(){await api('/api/stop',{method:'POST'});toast('■ Stopped')}
 async function loadLog(){const l=await api('/api/log');$('log').innerHTML=l.slice(0,60).map(e=>`<div><span class="t">${e.time.slice(5,16).replace('T',' ')}</span><span class="${e.kind}">${esc(e.msg)}</span></div>`).join('')||'<div class="muted">Nothing yet.</div>'}
+$('a_volume').oninput=e=>$('av').textContent=Math.round(e.target.value*100)+'%';$('a_volglobal').onchange=e=>{$('a_volume').disabled=e.target.checked};
 $('r_volume').oninput=e=>$('rv').textContent=Math.round(e.target.value*100)+'%';$('r_volglobal').onchange=e=>{$('r_volume').disabled=e.target.checked};
 $('global_volume').oninput=e=>$('gv').textContent=Math.round(e.target.value*100)+'%';setThemeLbl();
 (async()=>{await loadAll();await loadTimes();loadLog();setInterval(tick,1000);tick();setInterval(loadLog,15000);setInterval(loadTimes,600000)})();

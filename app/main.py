@@ -40,7 +40,12 @@ DEFAULTS = {
     # pre-adhan reminders; "sound" is "tts" (spoken announcement) or a library ref (filename / link:<id>)
     "reminders": {"enabled": False, "minutes": 15, "sound": "tts", "volume": None, "language": "en",
                   "prayers": {p: {"enabled": True, "minutes": None} for p in PRAYERS}},
+    # optional item (e.g. dua) played on the same speakers right after the adhan finishes
+    "after_adhan": {"enabled": False, "media": "", "gap": 2, "volume": None, "prayers": {p: True for p in PRAYERS}},
 }
+AFTER_MAX_WAIT = 600          # seconds; safety cap when the adhan duration is unknown
+MOCK_ADHAN_SECONDS = 0.05     # mock mode: simulated adhan length
+STOP_GEN = [0]                # bumped by /api/stop; a pending after-adhan item is skipped if it changed
 TTS_DIR = DATA_DIR / "tts"
 TTS_SOUND = "tts"
 REMINDER_MIN, REMINDER_MAX = 1, 120
@@ -151,11 +156,52 @@ def discover_speakers(timeout=8):
 CAST_CALLS = []  # recorded in mock mode (used by tests)
 
 
-def cast_to(speaker, url, volume, title="Adhan"):
+def wait_adhan_done(mc, url, gen, poll=1.0):
+    """Block until the adhan on this media controller ends. Returns 'finished', 'stopped' or 'timeout'."""
+    st = mc.status
+    dur = getattr(st, "duration", None)
+    deadline = time.monotonic() + (min(AFTER_MAX_WAIT, dur + 30) if dur else AFTER_MAX_WAIT)
+    seen_playing = False
+    while time.monotonic() < deadline:
+        if STOP_GEN[0] != gen:
+            return "stopped"
+        st = mc.status
+        if st.content_id and st.content_id != url:
+            return "stopped"  # something else was cast to the speaker
+        if st.player_state in ("PLAYING", "BUFFERING", "PAUSED"):
+            seen_playing = True
+            if not dur and st.duration:
+                dur = st.duration
+                deadline = min(deadline, time.monotonic() + dur + 30)
+        elif st.player_state in ("IDLE", "UNKNOWN") and seen_playing:
+            return "finished" if st.idle_reason in (None, "FINISHED") else "stopped"
+        time.sleep(poll)
+    return "timeout"
+
+
+def _after_ok(label, after, gen, result):
+    if result != "stopped" and STOP_GEN[0] == gen:
+        time.sleep(max(0, after.get("gap") or 0))
+    if result == "stopped" or STOP_GEN[0] != gen:
+        event("info", f"After-adhan item skipped on {label}: adhan was stopped")
+        return False
+    if result == "timeout":
+        event("info", f"Adhan on {label} did not report finishing; playing after-adhan item after safety timeout")
+    return True
+
+
+def cast_to(speaker, url, volume, title="Adhan", after=None):
+    """after: optional {"url", "label", "volume", "gap"} played on the same speaker once the adhan finishes."""
     label = speaker.get("name") or speaker.get("host")
+    gen = STOP_GEN[0]
     if MOCK_CAST:
         CAST_CALLS.append({"speaker": label, "url": url, "volume": volume, "title": title})
         event("play", f"[mock] cast {url} to {label} at volume {volume}")
+        if after:
+            time.sleep(MOCK_ADHAN_SECONDS)
+            if _after_ok(label, after, gen, "finished"):
+                CAST_CALLS.append({"speaker": label, "url": after["url"], "volume": after["volume"], "title": "After adhan"})
+                event("play", f"[mock] after adhan: cast {after['label']} to {label} at volume {after['volume']}")
         return
     import pychromecast
     browser = None
@@ -179,6 +225,13 @@ def cast_to(speaker, url, volume, title="Adhan"):
         mc.play_media(url, "audio/mpeg", title=title)
         mc.block_until_active(timeout=15)
         event("play", f"Casting {url} to {label} (vol {volume})")
+        if after:
+            if _after_ok(label, after, gen, wait_adhan_done(mc, url, gen)):
+                if after["volume"] is not None:
+                    cc.set_volume(float(after["volume"]))
+                mc.play_media(after["url"], "audio/mpeg", title="After adhan")
+                mc.block_until_active(timeout=15)
+                event("play", f"After adhan: casting {after['label']} to {label} (vol {after['volume']})")
         cc.disconnect(timeout=5)
     except Exception as e:
         event("error", f"Cast to {label} failed: {e}")
@@ -236,9 +289,44 @@ def play(prayer=None, media=None, speakers=None, volume=None):
     if not speakers:
         event("error", f"{prayer or 'test'}: no speakers selected")
         return False
-    event("info", f"Playing {label} for {prayer or 'test'} on {len(speakers)} speaker(s)")
+    after = after_adhan_cfg(prayer, s) if prayer else None
+    event("info", f"Playing {label} for {prayer or 'test'} on {len(speakers)} speaker(s)"
+          + (f", then {after['label']}" if after else ""))
     for sp in speakers:
-        threading.Thread(target=cast_to, args=(sp, url, volume), daemon=True).start()
+        threading.Thread(target=cast_to, args=(sp, url, volume, "Adhan", after), daemon=True).start()
+    return True
+
+
+def after_adhan_cfg(prayer, s):
+    a = s["after_adhan"]
+    if not a.get("enabled") or not a["prayers"].get(prayer, True) or not a.get("media"):
+        return None
+    url, label = resolve_media(a["media"], s)
+    if not url:
+        event("error", f"After adhan: {label}; skipping")
+        return None
+    return {"url": url, "label": label, "gap": a.get("gap") or 0,
+            "volume": a["volume"] if a.get("volume") is not None else s["global_volume"]}
+
+
+def play_after_adhan(media=None, speakers=None, volume=None):
+    """Play only the after-adhan item now (test)."""
+    s = load_settings()
+    a = s["after_adhan"]
+    media = media or a.get("media")
+    if volume is None:
+        volume = a["volume"] if a.get("volume") is not None else s["global_volume"]
+    speakers = speakers or s["speakers"]
+    url, label = resolve_media(media, s)
+    if not url:
+        event("error", f"After adhan test: {label}")
+        return False
+    if not speakers:
+        event("error", "After adhan test: no speakers selected")
+        return False
+    event("info", f"After adhan test: playing {label} on {len(speakers)} speaker(s)")
+    for sp in speakers:
+        threading.Thread(target=cast_to, args=(sp, url, volume, "After adhan"), daemon=True).start()
     return True
 
 
@@ -456,6 +544,11 @@ def put_settings(new: dict):
             raise ValueError(f"reminder minutes must be {REMINDER_MIN}-{REMINDER_MAX}")
         r["volume"] = None if r.get("volume") in (None, "") else min(1.0, max(0.0, float(r["volume"])))
         r["sound"] = str(r.get("sound") or TTS_SOUND)
+        a = s["after_adhan"]
+        a["enabled"], a["media"] = bool(a["enabled"]), str(a.get("media") or "")
+        a["gap"] = min(60, max(0, int(a.get("gap") or 0)))
+        a["volume"] = None if a.get("volume") in (None, "") else min(1.0, max(0.0, float(a["volume"])))
+        a["prayers"] = {p: bool(a["prayers"].get(p, True)) for p in PRAYERS}
         for p in PRAYERS:
             pc = r["prayers"].setdefault(p, {"enabled": True, "minutes": None})
             pc["enabled"] = bool(pc.get("enabled", True))
@@ -513,6 +606,9 @@ def delete_media(name: str):
             cfg["media"] = ""
     if s["reminders"].get("sound") == name:
         s["reminders"]["sound"] = TTS_SOUND
+    if s["after_adhan"].get("media") == name:
+        s["after_adhan"].update(media="", enabled=False)
+        event("info", "After-adhan item was deleted; after-adhan playback turned off")
     save_settings(s)
     event("info", f"Deleted {name}")
     return {"ok": True}
@@ -559,6 +655,9 @@ def delete_link(link_id: str):
             cfg["media"] = ""
     if s["reminders"].get("sound") == ref:
         s["reminders"]["sound"] = TTS_SOUND
+    if s["after_adhan"].get("media") == ref:
+        s["after_adhan"].update(media="", enabled=False)
+        event("info", "After-adhan item was deleted; after-adhan playback turned off")
     save_settings(s)
     event("info", f"Deleted link {link_id}")
     return {"ok": True}
@@ -591,8 +690,15 @@ def api_test_reminder(body: dict = None):
     return {"ok": ok, "text": reminder_text(prayer, int(body.get("minutes") or reminder_minutes(prayer) or load_settings()["reminders"]["minutes"]))}
 
 
+@app.post("/api/after/test")
+def api_test_after(body: dict = None):
+    body = body or {}
+    return {"ok": play_after_adhan(media=body.get("media"), speakers=body.get("speakers"), volume=body.get("volume"))}
+
+
 @app.post("/api/stop")
 def api_stop():
+    STOP_GEN[0] += 1
     if MOCK_CAST:
         return {"ok": True}
     import pychromecast

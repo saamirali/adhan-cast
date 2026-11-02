@@ -46,6 +46,17 @@ Settings (⚙️ button in the header) → **🔔 Reminders**: a global on/off s
   Older settings files get these defaults automatically. API: `POST /api/reminder/test {prayer, minutes?, sound?, volume?}`;
   `GET /api/times` includes `reminders: {prayer: iso|null}`.
 
+## After adhan (dua)
+Settings → **🤲 After adhan**: global on/off (off by default), the item to play (any uploaded MP3 or link from the library, e.g. a dua
+after adhan), a gap in seconds (default 2, 0–60), volume (or global volume), and per-prayer toggles (all on by default).
+- When the adhan is cast, the service watches the speaker's media status and plays the item on the same speaker once the adhan
+  ends (player IDLE, reason FINISHED). Safety timeout: adhan duration + 30 s, or 10 minutes if the duration is unknown; after a timeout
+  it still plays the item (and logs it).
+- If the adhan is stopped (■ Stop / `/api/stop`, cancelled on the speaker, or something else is cast), the item is **not** played.
+- If the chosen item is deleted from the library, after-adhan is cleared and turned off. Everything is logged in Recent activity.
+- **▶ Test** plays just the item now: `POST /api/after/test {media?, volume?, speakers?}`.
+- settings.json: `after_adhan: {enabled, media, gap, volume|null, prayers: {fajr: true, …}}`; older files get the defaults.
+
 ## Phone / home screen
 The UI is mobile-first (44px touch targets, 16px inputs so iOS doesn't zoom, safe-area aware, sticky header). Open it on your phone and use
 *Add to Home Screen* (iOS Safari / Android Chrome) – it ships a local web-app manifest and icon, no internet needed. Dark is the default;

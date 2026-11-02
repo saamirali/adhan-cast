@@ -201,3 +201,84 @@ def test_reminder_tts_fallback(monkeypatch):
     # missing library item also falls back to spoken
     assert c.post("/api/reminder/test", json={"prayer": "fajr", "minutes": 1, "sound": "gone.mp3"}).json()["ok"]
     assert "Fajr%20adhan%20in%201%20minute" in main.CAST_CALLS[-1]["url"] if (time.sleep(0.3) or True) else 0
+
+
+def _after_setup(c, **after):
+    c.post("/api/media", files={"file": ("main.mp3", MP3)})
+    c.post("/api/media", files={"file": ("dua.mp3", MP3)})
+    s = c.get("/api/settings").json()
+    s.update(speakers=[{"name": "Kitchen", "host": "192.0.2.5"}], default_media="main.mp3", host_ip_override="192.168.1.20")
+    s["reminders"]["enabled"] = False
+    for p in main.PRAYERS:
+        s["prayers"][p] = {"enabled": True, "media": "", "volume": None}
+    s["after_adhan"] = {"enabled": True, "media": "dua.mp3", "gap": 0, "volume": 0.25,
+                        "prayers": {p: True for p in main.PRAYERS}, **after}
+    assert c.put("/api/settings", json=s).status_code == 200
+    main.CAST_CALLS.clear()
+
+
+def test_after_adhan_backcompat_and_scheduler():
+    import json
+    c = client()
+    s = json.loads(main.SETTINGS_FILE.read_text()); s.pop("after_adhan", None)
+    main.SETTINGS_FILE.write_text(json.dumps(s))
+    a = c.get("/api/settings").json()["after_adhan"]
+    assert a["enabled"] is False and a["gap"] == 2 and a["volume"] is None and all(a["prayers"].values())
+    _after_setup(c, prayers={**{p: True for p in main.PRAYERS}, "asr": False})
+    t = main.compute_times(date.today())
+    sch = main.Scheduler(interval=5)
+    for p in ("dhuhr", "asr"):
+        sch.last = t[p] - timedelta(seconds=3); sch.tick(now=t[p] + timedelta(seconds=2))
+    time.sleep(0.5)
+    seq = [(x["title"], x["url"].rsplit("/", 1)[-1], x["volume"]) for x in main.CAST_CALLS]
+    assert seq.count(("After adhan", "dua.mp3", 0.25)) == 1  # dhuhr only, asr toggled off
+    assert seq.index(("After adhan", "dua.mp3", 0.25)) > 0 and seq[0][0] == "Adhan"
+    assert len([x for x in seq if x[0] == "Adhan"]) == 2
+    assert any("after adhan" in e["msg"] for e in c.get("/api/log").json())
+
+
+def test_after_adhan_skipped_when_stopped():
+    c = client()
+    _after_setup(c)
+    old = main.MOCK_ADHAN_SECONDS
+    main.MOCK_ADHAN_SECONDS = 0.4
+    try:
+        assert c.post("/api/test", json={"prayer": "isha"}).json()["ok"]
+        time.sleep(0.1)
+        c.post("/api/stop")
+        time.sleep(0.6)
+    finally:
+        main.MOCK_ADHAN_SECONDS = old
+    assert [x["title"] for x in main.CAST_CALLS] == ["Adhan"]
+    assert any("skipped" in e["msg"] for e in c.get("/api/log").json())
+
+
+def test_after_adhan_test_endpoint_and_delete():
+    c = client()
+    _after_setup(c)
+    assert c.post("/api/after/test", json={}).json()["ok"]
+    time.sleep(0.3)
+    assert [(x["title"], x["url"]) for x in main.CAST_CALLS] == [("After adhan", "http://192.168.1.20:8080/media/dua.mp3")]
+    c.delete("/api/media/dua.mp3")
+    a = c.get("/api/settings").json()["after_adhan"]
+    assert a["media"] == "" and a["enabled"] is False
+    assert not c.post("/api/after/test", json={}).json()["ok"]
+
+
+def test_wait_adhan_done_real_logic(monkeypatch):
+    from types import SimpleNamespace as NS
+    url = "http://h/a.mp3"
+    states = iter([NS(player_state="PLAYING", idle_reason=None, content_id=url, duration=100)] * 2 +
+                  [NS(player_state="IDLE", idle_reason="FINISHED", content_id=url, duration=100)] * 5)
+    class MC:
+        @property
+        def status(self): return next(states)
+    assert main.wait_adhan_done(MC(), url, main.STOP_GEN[0], poll=0) == "finished"
+    states = iter([NS(player_state="PLAYING", idle_reason=None, content_id=url, duration=100)] * 2 +
+                  [NS(player_state="IDLE", idle_reason="CANCELLED", content_id=url, duration=100)] * 5)
+    assert main.wait_adhan_done(MC(), url, main.STOP_GEN[0], poll=0) == "stopped"
+    states = iter([NS(player_state="PLAYING", idle_reason=None, content_id=url, duration=None)] * 10**6)
+    monkeypatch.setattr(main, "AFTER_MAX_WAIT", 0.05)
+    assert main.wait_adhan_done(MC(), url, main.STOP_GEN[0], poll=0.01) == "timeout"
+    states = iter([NS(player_state="PLAYING", idle_reason=None, content_id=url, duration=100)] * 100)
+    assert main.wait_adhan_done(MC(), url, main.STOP_GEN[0] - 1, poll=0) == "stopped"
