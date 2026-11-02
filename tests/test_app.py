@@ -282,3 +282,106 @@ def test_wait_adhan_done_real_logic(monkeypatch):
     assert main.wait_adhan_done(MC(), url, main.STOP_GEN[0], poll=0.01) == "timeout"
     states = iter([NS(player_state="PLAYING", idle_reason=None, content_id=url, duration=100)] * 100)
     assert main.wait_adhan_done(MC(), url, main.STOP_GEN[0] - 1, poll=0) == "stopped"
+
+
+def _sched_setup(c):
+    c.post("/api/media", files={"file": ("main.mp3", MP3)})
+    c.post("/api/media", files={"file": ("kahf.mp3", MP3)})
+    s = c.get("/api/settings").json()
+    s.update(speakers=[{"name": "Kitchen", "host": "192.0.2.5"}], default_media="main.mp3", host_ip_override="192.168.1.20")
+    s["reminders"]["enabled"] = False
+    s["after_adhan"]["enabled"] = False
+    c.put("/api/settings", json=s)
+    for sc in c.get("/api/schedules").json():
+        c.delete("/api/schedules/" + sc["id"])
+    main.BUSY.clear(); main.CAST_CALLS.clear()
+
+
+def test_schedule_crud_validation_and_next_run():
+    c = client()
+    _sched_setup(c)
+    assert c.post("/api/schedules", json={"name": "x", "media": "kahf.mp3", "days": []}).status_code == 400
+    assert c.post("/api/schedules", json={"name": "x", "media": "kahf.mp3", "days": [4], "time": "25:00"}).status_code == 400
+    assert c.post("/api/schedules", json={"name": "x", "media": "", "days": [4]}).status_code == 400
+    r = c.post("/api/schedules", json={"name": "Al-Kahf", "media": "kahf.mp3", "days": [4], "mode": "time", "time": "09:00"}).json()
+    nr = datetime.fromisoformat(r["next_run"])
+    assert nr.weekday() == 4 and (nr.hour, nr.minute) == (9, 0) and r["enabled"]
+    r2 = c.put("/api/schedules/" + r["id"], json={"mode": "prayer", "prayer": "maghrib", "offset": -10, "days": [0, 1, 2, 3, 4, 5, 6]}).json()
+    assert r2["id"] == r["id"] and r2["name"] == "Al-Kahf" and r2["mode"] == "prayer"
+    # settings PUT never clobbers schedules
+    s = c.get("/api/settings").json(); s["schedules"] = []
+    c.put("/api/settings", json=s)
+    assert len(c.get("/api/schedules").json()) == 1
+    assert c.get("/api/times").json()["next_schedule"]["name"] == "Al-Kahf"
+    c.delete("/api/media/kahf.mp3")
+    assert c.get("/api/schedules").json()[0]["enabled"] is False
+    assert c.delete("/api/schedules/" + r["id"]).status_code == 200
+    assert c.delete("/api/schedules/" + r["id"]).status_code == 404
+
+
+def test_schedule_day_of_week_and_prayer_relative():
+    s = main.load_settings()
+    tz = ZoneInfo(s["timezone"])
+    fri, sat = date(2026, 11, 6), date(2026, 11, 7)
+    sc = main.normalize_schedule({"name": "Kahf", "media": "k.mp3", "days": [4], "time": "09:00"})
+    assert main.schedule_time(sc, fri, s) == datetime(2026, 11, 6, 9, 0, tzinfo=tz)
+    assert main.schedule_time(sc, sat, s) is None
+    assert main.next_run(sc, datetime(2026, 11, 6, 9, 30, tzinfo=tz), s) == datetime(2026, 11, 13, 9, 0, tzinfo=tz)
+    rel = main.normalize_schedule({"name": "Mulk", "media": "k.mp3", "days": [5], "mode": "prayer", "prayer": "isha", "offset": 10})
+    assert main.schedule_time(rel, sat, s) == main.compute_times(sat, s)["isha"] + timedelta(minutes=10)
+    before = main.normalize_schedule({"name": "B", "media": "k.mp3", "days": [5], "mode": "prayer", "prayer": "maghrib", "offset": -15})
+    assert main.schedule_time(before, sat, s) == main.compute_times(sat, s)["maghrib"] - timedelta(minutes=15)
+
+
+def test_schedule_fires_and_skips_missed():
+    c = client()
+    _sched_setup(c)
+    today = date.today()
+    r = c.post("/api/schedules", json={"name": "Kahf", "media": "kahf.mp3", "days": [today.weekday()], "time": "09:00", "volume": 0.4}).json()
+    tz = ZoneInfo(main.load_settings()["timezone"])
+    t = datetime(today.year, today.month, today.day, 9, 0, tzinfo=tz)
+    sch = main.Scheduler(interval=5)
+    sch.last = t - timedelta(seconds=3); sch.tick(now=t + timedelta(seconds=2)); sch.tick(now=t + timedelta(seconds=7))
+    time.sleep(0.3)
+    calls = [x for x in main.CAST_CALLS if x["title"] == "Scheduled"]
+    assert len(calls) == 1 and calls[0]["url"].endswith("/media/kahf.mp3") and calls[0]["volume"] == 0.4
+    main.CAST_CALLS.clear(); main.BUSY.clear()
+    sch2 = main.Scheduler(interval=5)
+    sch2.last = t - timedelta(minutes=30); sch2.tick(now=t + timedelta(minutes=1))  # clock jump: missed
+    time.sleep(0.2)
+    assert not main.CAST_CALLS
+    # test endpoint
+    assert c.post(f"/api/schedules/{r['id']}/test").json()["ok"]
+
+
+def test_schedule_conflict_with_adhan():
+    c = client()
+    _sched_setup(c)
+    today = date.today()
+    tz = ZoneInfo(main.load_settings()["timezone"])
+    t = main.compute_times(today)["asr"]
+    # schedule at exactly the adhan time: adhan fires first, schedule is delayed while adhan plays
+    c.post("/api/schedules", json={"name": "Kahf", "media": "kahf.mp3", "days": [today.weekday()], "mode": "prayer", "prayer": "asr", "offset": 0})
+    sch = main.Scheduler(interval=5)
+    sch.last = t - timedelta(seconds=3); sch.tick(now=t + timedelta(seconds=2))
+    time.sleep(0.2)
+    assert [x["title"] for x in main.CAST_CALLS] == ["Adhan"]
+    assert any("delayed" in e["msg"] for e in c.get("/api/log").json())
+    # once the adhan is over, the delayed schedule plays on the next tick
+    main.BUSY["Kitchen"]["until"] = time.monotonic() - 1
+    sch.tick(now=t + timedelta(seconds=60))
+    time.sleep(0.2)
+    assert [x["title"] for x in main.CAST_CALLS] == ["Adhan", "Scheduled"]
+    # adhan preempts a playing scheduled item
+    main.mark_busy("Kitchen", "Scheduled", "Kahf")
+    main.play(prayer="isha")
+    time.sleep(0.2)
+    assert any("takes priority" in e["msg"] for e in c.get("/api/log").json())
+    # a schedule blocked for more than 10 min is skipped
+    main.BUSY.clear(); main.CAST_CALLS.clear()
+    main.mark_busy("Kitchen", "Adhan")
+    sch3 = main.Scheduler(interval=5)
+    sch3.pending = {c.get("/api/schedules").json()[0]["id"]: (t, True)}
+    sch3.last = t + timedelta(minutes=11) - timedelta(seconds=5)
+    sch3.tick(now=t + timedelta(minutes=11))
+    assert not sch3.pending and not main.CAST_CALLS

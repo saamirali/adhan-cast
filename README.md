@@ -88,3 +88,15 @@ sudo ufw allow 5353/udp     # mDNS
   (not Docker/VPN, e.g. 172.x or tun0). If wrong, set *Host LAN IP override*. Open that URL from your phone to confirm it plays.
 - **Wrong times**: check lat/lon, timezone, method and Asr school; use offsets for masjid adjustments.
 - Logs: the "Recent activity" panel in the UI and `journalctl -u adhan`.
+
+## Schedules
+
+Play any library item on a recurring schedule, for example Surah Al-Kahf every Friday at 9:00.
+
+- Each schedule has a name, a library item, days (Mon–Sun) and a time. The time is either a fixed clock time or relative to a prayer, such as 15 min after Isha.
+- Each schedule also has its own speakers (empty = the adhan speakers), a volume (empty = global) and an enable switch.
+- The **adhan always wins**. A schedule never starts while an adhan, reminder or after-adhan item is playing. It is retried every tick for up to 10 minutes, then skipped, and both cases are logged. If an adhan starts on a speaker playing a schedule, the adhan replaces it and the preemption is logged.
+- Missed times (while the service was down, or after a clock jump) are skipped, not replayed.
+- Deleting a library item disables the schedules that use it.
+- UI: **Schedule** in the side rail or bottom nav. The dashboard shows the next scheduled item under the next prayer.
+- API: `GET/POST /api/schedules`, `PUT/DELETE /api/schedules/{id}`, `POST /api/schedules/{id}/test`.

@@ -42,7 +42,14 @@ DEFAULTS = {
                   "prayers": {p: {"enabled": True, "minutes": None} for p in PRAYERS}},
     # optional item (e.g. dua) played on the same speakers right after the adhan finishes
     "after_adhan": {"enabled": False, "media": "", "gap": 2, "volume": None, "prayers": {p: True for p in PRAYERS}},
+    # user-defined playback schedules, managed via /api/schedules (see normalize_schedule)
+    "schedules": [],
 }
+SCHED_TITLE = "Scheduled"
+PRIORITY_TITLES = ("Adhan", "Adhan reminder", "After adhan")
+BUSY_EST = {"Adhan": 300, "Adhan reminder": 45, "After adhan": 300, SCHED_TITLE: 1800}  # seconds, until status says otherwise
+BUSY = {}                     # speaker label -> {"kind", "name", "until" (monotonic)}
+SCHED_MAX_DELAY = 600         # a schedule blocked by adhan/reminder/dua retries for up to 10 min, then is skipped
 AFTER_MAX_WAIT = 600          # seconds; safety cap when the adhan duration is unknown
 MOCK_ADHAN_SECONDS = 0.05     # mock mode: simulated adhan length
 STOP_GEN = [0]                # bumped by /api/stop; a pending after-adhan item is skipped if it changed
@@ -190,16 +197,37 @@ def _after_ok(label, after, gen, result):
     return True
 
 
-def cast_to(speaker, url, volume, title="Adhan", after=None):
+def speaker_label(sp):
+    return sp.get("name") or sp.get("host")
+
+
+def busy_with(label):
+    """Returns the priority item (adhan/reminder/after-adhan) currently playing on this speaker, or None."""
+    b = BUSY.get(label)
+    if b and b["kind"] in PRIORITY_TITLES and b["until"] > time.monotonic():
+        return b["kind"]
+    return None
+
+
+def mark_busy(label, title, sched_name=None, seconds=None):
+    prev = BUSY.get(label)
+    if title in PRIORITY_TITLES and prev and prev["kind"] == SCHED_TITLE and prev["until"] > time.monotonic():
+        event("info", f"{title} takes priority: stopping scheduled '{prev.get('name')}' on {label}")
+    BUSY[label] = {"kind": title, "name": sched_name, "until": time.monotonic() + (seconds if seconds is not None else BUSY_EST.get(title, 300))}
+
+
+def cast_to(speaker, url, volume, title="Adhan", after=None, sched_name=None):
     """after: optional {"url", "label", "volume", "gap"} played on the same speaker once the adhan finishes."""
     label = speaker.get("name") or speaker.get("host")
     gen = STOP_GEN[0]
+    mark_busy(label, title, sched_name)
     if MOCK_CAST:
         CAST_CALLS.append({"speaker": label, "url": url, "volume": volume, "title": title})
         event("play", f"[mock] cast {url} to {label} at volume {volume}")
         if after:
             time.sleep(MOCK_ADHAN_SECONDS)
             if _after_ok(label, after, gen, "finished"):
+                mark_busy(label, "After adhan")
                 CAST_CALLS.append({"speaker": label, "url": after["url"], "volume": after["volume"], "title": "After adhan"})
                 event("play", f"[mock] after adhan: cast {after['label']} to {label} at volume {after['volume']}")
         return
@@ -225,10 +253,14 @@ def cast_to(speaker, url, volume, title="Adhan", after=None):
         mc.play_media(url, "audio/mpeg", title=title)
         mc.block_until_active(timeout=15)
         event("play", f"Casting {url} to {label} (vol {volume})")
+        dur = getattr(mc.status, "duration", None)
+        if dur:
+            mark_busy(label, title, sched_name, dur + 5)
         if after:
             if _after_ok(label, after, gen, wait_adhan_done(mc, url, gen)):
                 if after["volume"] is not None:
                     cc.set_volume(float(after["volume"]))
+                mark_busy(label, "After adhan")
                 mc.play_media(after["url"], "audio/mpeg", title="After adhan")
                 mc.block_until_active(timeout=15)
                 event("play", f"After adhan: casting {after['label']} to {label} (vol {after['volume']})")
@@ -403,6 +435,86 @@ def play_reminder(prayer, minutes=None, sound=None, speakers=None, volume=None):
     return True
 
 
+# ---------- user schedules ----------
+DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def normalize_schedule(d, existing=None):
+    """Validate/normalise a schedule dict. Raises ValueError."""
+    sc = dict(existing or {"id": uuid.uuid4().hex[:8], "enabled": True, "speakers": None, "volume": None,
+                           "mode": "time", "time": "09:00", "prayer": "fajr", "offset": 0, "days": []})
+    sc.update({k: v for k, v in (d or {}).items() if k != "id"})
+    sc["name"] = str(sc.get("name") or "").strip()[:80] or "Schedule"
+    sc["media"] = str(sc.get("media") or "")
+    if not sc["media"]:
+        raise ValueError("choose a library item")
+    days = sorted({int(x) for x in sc.get("days") or []})
+    if not days or any(x < 0 or x > 6 for x in days):
+        raise ValueError("pick at least one day (0=Mon..6=Sun)")
+    sc["days"] = days
+    if sc["mode"] not in ("time", "prayer"):
+        raise ValueError("mode must be 'time' or 'prayer'")
+    if sc["mode"] == "time":
+        if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(sc.get("time") or "")):
+            raise ValueError("time must be HH:MM (24h)")
+    else:
+        if sc.get("prayer") not in PRAYERS + ["sunrise"]:
+            raise ValueError("unknown prayer")
+        sc["offset"] = int(sc.get("offset") or 0)
+        if abs(sc["offset"]) > 720:
+            raise ValueError("offset must be within ±720 minutes")
+    sc["volume"] = None if sc.get("volume") in (None, "") else min(1.0, max(0.0, float(sc["volume"])))
+    sp = sc.get("speakers")
+    sc["speakers"] = [{"name": str(x.get("name") or ""), "host": str(x.get("host") or "")} for x in sp] if sp else None
+    sc["enabled"] = bool(sc.get("enabled", True))
+    return sc
+
+
+def schedule_time(sc, d, s):
+    """Datetime the schedule runs on date d, or None if not on that weekday."""
+    if d.weekday() not in sc["days"]:
+        return None
+    tz = ZoneInfo(s["timezone"])
+    if sc["mode"] == "time":
+        h, m = map(int, sc["time"].split(":"))
+        return datetime(d.year, d.month, d.day, h, m, tzinfo=tz)
+    t = compute_times(d, s)[sc["prayer"]]
+    return (t + timedelta(minutes=int(sc.get("offset") or 0))).replace(second=0, microsecond=0)
+
+
+def next_run(sc, now, s):
+    if not sc.get("enabled"):
+        return None
+    for i in range(0, 8):
+        t = schedule_time(sc, now.date() + timedelta(days=i), s)
+        if t and t > now:
+            return t
+    return None
+
+
+def run_schedule(sc, s=None, test=False):
+    """Cast the schedule's item. Returns 'played', 'busy' or 'error'. Skips if any target speaker is playing
+    an adhan / reminder / after-adhan item (caller decides whether to retry)."""
+    s = s or load_settings()
+    speakers = sc.get("speakers") or s["speakers"]
+    if not speakers:
+        event("error", f"Schedule '{sc['name']}': no speakers")
+        return "error"
+    busy = [(speaker_label(sp), busy_with(speaker_label(sp))) for sp in speakers]
+    busy = [f"{l} ({k})" for l, k in busy if k]
+    if busy:
+        return "busy:" + ", ".join(busy)
+    url, label = resolve_media(sc["media"], s)
+    if not url:
+        event("error", f"Schedule '{sc['name']}': {label}")
+        return "error"
+    vol = sc["volume"] if sc.get("volume") is not None else s["global_volume"]
+    event("schedule", f"{'Test: ' if test else ''}Schedule '{sc['name']}': playing {label} on {len(speakers)} speaker(s)")
+    for sp in speakers:
+        threading.Thread(target=cast_to, args=(sp, url, vol, SCHED_TITLE, None, sc["name"]), daemon=True).start()
+    return "played"
+
+
 # ---------- scheduler ----------
 class Scheduler(threading.Thread):
     """Checks every few seconds; fires any enabled prayer whose time passed since last check.
@@ -412,6 +524,7 @@ class Scheduler(threading.Thread):
         super().__init__(daemon=True)
         self.interval = interval
         self.fired = set()
+        self.pending = {}  # schedule id -> (due datetime, logged)
         self.last = None
         self.stop_evt = threading.Event()
 
@@ -445,6 +558,33 @@ class Scheduler(threading.Thread):
                             play_reminder(p, minutes=m)
                         except Exception as e:
                             event("error", f"Reminder {p} failed: {e}")
+        # user schedules (fired after adhans in the same tick, so an adhan due now always wins the speaker)
+        for d in sorted({last.date(), now.date()}):
+            for sc in s.get("schedules", []):
+                if not sc.get("enabled"):
+                    continue
+                t = schedule_time(sc, d, s)
+                key = (d.isoformat(), "schedule:" + sc["id"])
+                if t and last < t <= now and key not in self.fired:
+                    self.fired.add(key)
+                    self.pending[sc["id"]] = (t, False)
+        for sid, (due, logged) in list(self.pending.items()):
+            sc = next((x for x in s.get("schedules", []) if x["id"] == sid and x.get("enabled")), None)
+            if not sc:
+                self.pending.pop(sid); continue
+            if (now - due).total_seconds() > SCHED_MAX_DELAY:
+                event("info", f"Schedule '{sc['name']}' skipped: speakers stayed busy for {SCHED_MAX_DELAY // 60} min")
+                self.pending.pop(sid); continue
+            try:
+                r = run_schedule(sc, s)
+            except Exception as e:
+                event("error", f"Schedule '{sc['name']}' failed: {e}"); r = "error"
+            if r.startswith("busy"):
+                if not logged:
+                    event("info", f"Schedule '{sc['name']}' delayed: {r[5:]} is playing")
+                    self.pending[sid] = (due, True)
+            else:
+                self.pending.pop(sid)
         self.fired = {k for k in self.fired if k[0] >= (now.date() - timedelta(days=1)).isoformat()}
         self.last = now
 
@@ -516,11 +656,14 @@ def api_times(day: str = None):
         tm = compute_times(d + timedelta(days=1), s)
         upcoming = [("fajr", tm["fajr"])]
     nxt = upcoming[0] if upcoming else None
+    runs = [(nr, sc) for sc in s.get("schedules", []) if (nr := next_run(sc, now, s))]
+    ns = min(runs, key=lambda x: x[0]) if runs else None
     return {"date": d.isoformat(), "timezone": s["timezone"], "location": s["location_name"], "source": t["_source"],
             "method": s["method"], "madhab": s["madhab"], "now": now.isoformat(timespec="seconds"),
             "times": {p: t[p].isoformat() for p in PRAYERS + ["sunrise"]},
             "reminders": {p: ((t[p] - timedelta(minutes=m)).isoformat() if (m := reminder_minutes(p, s)) is not None else None)
                           for p in PRAYERS},
+            "next_schedule": {"id": ns[1]["id"], "name": ns[1]["name"], "time": ns[0].isoformat()} if ns else None,
             "next": {"prayer": nxt[0], "time": nxt[1].isoformat(), "seconds": int((nxt[1] - now).total_seconds())} if nxt else None}
 
 
@@ -532,7 +675,7 @@ def get_settings():
 
 @app.put("/api/settings")
 def put_settings(new: dict):
-    s = _merge({k: v for k, v in new.items() if k in DEFAULTS}, load_settings())
+    s = _merge({k: v for k, v in new.items() if k in DEFAULTS and k != "schedules"}, load_settings())
     try:
         ZoneInfo(s["timezone"]); METHODS[s["method"]]; Madhab[s["madhab"]]
         s["latitude"], s["longitude"] = float(s["latitude"]), float(s["longitude"])
@@ -609,6 +752,10 @@ def delete_media(name: str):
     if s["after_adhan"].get("media") == name:
         s["after_adhan"].update(media="", enabled=False)
         event("info", "After-adhan item was deleted; after-adhan playback turned off")
+    for sc in s["schedules"]:
+        if sc.get("media") == name and sc.get("enabled"):
+            sc["enabled"] = False
+            event("info", f"Schedule '{sc['name']}' disabled: its library item was deleted")
     save_settings(s)
     event("info", f"Deleted {name}")
     return {"ok": True}
@@ -658,6 +805,10 @@ def delete_link(link_id: str):
     if s["after_adhan"].get("media") == ref:
         s["after_adhan"].update(media="", enabled=False)
         event("info", "After-adhan item was deleted; after-adhan playback turned off")
+    for sc in s["schedules"]:
+        if sc.get("media") == ref and sc.get("enabled"):
+            sc["enabled"] = False
+            event("info", f"Schedule '{sc['name']}' disabled: its library item was deleted")
     save_settings(s)
     event("info", f"Deleted link {link_id}")
     return {"ok": True}
@@ -690,6 +841,71 @@ def api_test_reminder(body: dict = None):
     return {"ok": ok, "text": reminder_text(prayer, int(body.get("minutes") or reminder_minutes(prayer) or load_settings()["reminders"]["minutes"]))}
 
 
+def _sched_out(sc, s, now):
+    t = next_run(sc, now, s)
+    return {**sc, "next_run": t.isoformat() if t else None}
+
+
+@app.get("/api/schedules")
+def list_schedules():
+    s = load_settings()
+    now = datetime.now(ZoneInfo(s["timezone"]))
+    return [_sched_out(sc, s, now) for sc in s["schedules"]]
+
+
+@app.post("/api/schedules")
+def create_schedule(body: dict):
+    s = load_settings()
+    try:
+        sc = normalize_schedule(body)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(400, str(e))
+    s["schedules"].append(sc)
+    save_settings(s)
+    event("info", f"Schedule '{sc['name']}' added")
+    return _sched_out(sc, s, datetime.now(ZoneInfo(s["timezone"])))
+
+
+def _find_sched(s, sid):
+    sc = next((x for x in s["schedules"] if x["id"] == sid), None)
+    if not sc:
+        raise HTTPException(404, "schedule not found")
+    return sc
+
+
+@app.put("/api/schedules/{sid}")
+def update_schedule(sid: str, body: dict):
+    s = load_settings()
+    old = _find_sched(s, sid)
+    try:
+        sc = normalize_schedule(body, old)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(400, str(e))
+    s["schedules"] = [sc if x["id"] == sid else x for x in s["schedules"]]
+    save_settings(s)
+    event("info", f"Schedule '{sc['name']}' updated")
+    return _sched_out(sc, s, datetime.now(ZoneInfo(s["timezone"])))
+
+
+@app.delete("/api/schedules/{sid}")
+def delete_schedule(sid: str):
+    s = load_settings()
+    sc = _find_sched(s, sid)
+    s["schedules"] = [x for x in s["schedules"] if x["id"] != sid]
+    save_settings(s)
+    event("info", f"Schedule '{sc['name']}' deleted")
+    return {"ok": True}
+
+
+@app.post("/api/schedules/{sid}/test")
+def test_schedule(sid: str):
+    s = load_settings()
+    r = run_schedule(_find_sched(s, sid), s, test=True)
+    if r.startswith("busy"):
+        event("info", f"Schedule test skipped: {r[5:]} is playing")
+    return {"ok": r == "played", "result": r}
+
+
 @app.post("/api/after/test")
 def api_test_after(body: dict = None):
     body = body or {}
@@ -699,6 +915,7 @@ def api_test_after(body: dict = None):
 @app.post("/api/stop")
 def api_stop():
     STOP_GEN[0] += 1
+    BUSY.clear()
     if MOCK_CAST:
         return {"ok": True}
     import pychromecast
