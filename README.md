@@ -58,8 +58,9 @@ after adhan), a gap in seconds (default 2, 0–60), volume (or global volume), a
 - settings.json: `after_adhan: {enabled, media, gap, volume|null, prayers: {fajr: true, …}}`; older files get the defaults.
 
 ## Phone / home screen
-The UI is mobile-first (44px touch targets, 16px inputs so iOS doesn't zoom, safe-area aware, sticky header). Open it on your phone and use
-*Add to Home Screen* (iOS Safari / Android Chrome) – it ships a local web-app manifest and icon, no internet needed. Dark is the default;
+The UI uses a "Glass Command Center" design (frosted glass cards on a warm amber background with a subtle mosque silhouette,
+side icon bar on desktop that becomes a bottom nav on phones). All icons are inline SVG (no emoji, no CDN). The UI is mobile-first (44px touch targets, 16px inputs so iOS doesn't zoom, safe-area aware, sticky header). Open it on your phone and use
+*Add to Home Screen* (iOS Safari / Android Chrome) – it ships a local web-app manifest and icon, no internet needed. Dark glass is the default, with a light glass variant;
 the ☀️/🌙 button switches theme and is remembered per browser.
 
 ## Settings

@@ -1,205 +1,243 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Adhan</title><meta name="color-scheme" content="dark light"><meta name="theme-color" content="#0b1110" id="tc">
+<title>Adhan</title><meta name="color-scheme" content="dark light"><meta name="theme-color" content="#2a1a12" id="tc">
 <link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/static/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/static/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Adhan">
 <script>if(localStorage.theme==="light")document.documentElement.classList.add("light")</script>
 <style>
-:root{--bg:#0b1110;--bg2:#0f1816;--card:#141e1b;--card2:#1a2622;--fg:#e8f0ec;--muted:#93a69d;--line:#24332e;--accent:#34d399;--accent2:#10b981;--onaccent:#04241a;--glow:rgba(52,211,153,.18);--danger:#f87171;--warn:#fbbf24;--shadow:0 10px 30px rgba(0,0,0,.35);--r:18px}
-:root.light{--bg:#eef3f1;--bg2:#e6edea;--card:#ffffff;--card2:#f5f8f7;--fg:#13201b;--muted:#5c6b65;--line:#dde5e1;--accent:#059669;--accent2:#047857;--onaccent:#fff;--glow:rgba(5,150,105,.12);--danger:#dc2626;--warn:#b45309;--shadow:0 8px 24px rgba(16,40,30,.08)}
+:root{--fg:#fff;--muted:rgba(255,255,255,.64);--line:rgba(255,255,255,.12);--glass:rgba(255,255,255,.09);--glass2:rgba(0,0,0,.2);--gb:rgba(255,255,255,.18);--hi:rgba(255,255,255,.2);
+--accent:#ff8a3d;--accent2:#f26a1b;--soft:#ffb27a;--glow:rgba(242,106,27,.4);--danger:#ff7a7a;--warn:#ffd27a;--ok:#4ade80;--shadow:0 10px 40px rgba(0,0,0,.25);
+--bg1:#3a2419;--bg2:#5a3a28;--bg3:#24160f;--rad1:#e0894a88;--rad2:#6b3a2a;--sil:#0d0604;--silop:.85;--star:.1;--onaccent:#fff;--r:22px}
+:root.light{--fg:#2b1a10;--muted:rgba(60,35,20,.62);--line:rgba(90,50,20,.12);--glass:rgba(255,255,255,.5);--glass2:rgba(255,255,255,.55);--gb:rgba(255,255,255,.75);--hi:rgba(255,255,255,.9);
+--accent:#ea6a12;--accent2:#d4570a;--soft:#c2500a;--glow:rgba(234,106,18,.25);--danger:#c62828;--warn:#a16207;--ok:#16a34a;--shadow:0 10px 30px rgba(120,60,20,.12);
+--bg1:#fbe9d6;--bg2:#f6d2ad;--bg3:#efc29a;--rad1:#ffb27a99;--rad2:#ffe6cc;--sil:#8a4a22;--silop:.32;--star:.18}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
-body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,sans-serif;background:radial-gradient(1200px 600px at 10% -10%,var(--glow),transparent),var(--bg);color:var(--fg);line-height:1.45;min-height:100vh}
-.wrap{max-width:1100px;margin:0 auto;padding:16px 14px 40px}
-.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
-.brand{display:flex;align-items:center;gap:10px}.logo{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--onaccent);font-size:20px;box-shadow:var(--shadow)}
-.brand h1{margin:0;font-size:1.15rem;letter-spacing:-.01em}.sub{color:var(--muted);font-size:.82rem}
-.grid{display:grid;gap:14px;grid-template-columns:1fr}
-@media(min-width:900px){.grid{grid-template-columns:1.1fr .9fr}.span2{grid-column:1/-1}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
-.card h2{margin:0 0 12px;font-size:.95rem;font-weight:650;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
-.card h2 .tag{margin-left:auto}
-.hero{display:flex;gap:20px;align-items:center;background:linear-gradient(140deg,var(--card2),var(--card));position:relative;overflow:hidden}
-.hero::after{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:var(--glow);filter:blur(10px)}
-.ring{position:relative;width:150px;height:150px;flex:none}.ring svg{transform:rotate(-90deg)}.ring .c{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
-.ring .cd{font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.hero .lbl{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.12em}
-.hero .name{font-size:2.3rem;font-weight:750;letter-spacing:-.03em;line-height:1.1;color:var(--accent)}.hero .at{font-size:1.1rem;margin-top:2px}
-@media(max-width:520px){.hero{flex-direction:column;text-align:center}.hero .name{font-size:2rem}}
-.plist{display:flex;flex-direction:column;gap:8px}
-.prow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--card2);border:1px solid transparent;transition:border-color .2s,transform .2s,background .2s}
-.prow:hover{border-color:var(--line);transform:translateY(-1px)}
-.prow.next{border-color:var(--accent);background:linear-gradient(90deg,var(--glow),var(--card2));box-shadow:0 0 0 3px var(--glow)}
-.prow .pn{font-weight:650}.prow .pt{font-variant-numeric:tabular-nums;font-weight:600;font-size:1.05rem}
-.prow.sun{opacity:.7;grid-template-columns:1fr auto}
-.prow.off .pn,.prow.off .pt{opacity:.45}
-.opts{grid-column:1/-1;display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:center}
-@media(max-width:520px){.opts{grid-template-columns:1fr 1fr}.opts select{grid-column:1/-1}}
-.sw{position:relative;width:44px;height:26px;flex:none}.sw input{opacity:0;width:0;height:0}
-.sw span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:.2s;cursor:pointer}
-.sw span::before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.sw input:checked+span{background:var(--accent)}.sw input:checked+span::before{transform:translateX(18px)}
-.sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
-button,.btn{font:inherit;font-weight:600;font-size:.88rem;border:1px solid transparent;border-radius:12px;padding:9px 14px;cursor:pointer;background:var(--accent);color:var(--onaccent);transition:transform .15s,filter .15s,background .2s;display:inline-flex;align-items:center;gap:6px}
-button:hover{filter:brightness(1.08);transform:translateY(-1px)}button:active{transform:none}
-button.ghost{background:transparent;color:var(--fg);border-color:var(--line)}button.ghost:hover{background:var(--card2)}
-button.danger{background:transparent;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
-button.sm{padding:6px 10px;font-size:.8rem;border-radius:10px}
-input,select{font:inherit;font-size:.9rem;width:100%;padding:9px 11px;border-radius:11px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);transition:border-color .2s,box-shadow .2s}
-input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
-input[type=range]{padding:0;accent-color:var(--accent);background:none;border:0}
-label.f{display:flex;flex-direction:column;gap:5px;font-size:.8rem;color:var(--muted);font-weight:500}
-.fg{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+body{margin:0;font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Ubuntu,sans-serif;color:var(--fg);min-height:100vh;overflow-x:hidden;background:var(--bg3);line-height:1.45}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(60% 50% at 75% 20%,var(--rad1),transparent 70%),radial-gradient(50% 60% at 15% 80%,var(--rad2),transparent 70%),linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%)}
+.bg svg{position:absolute;bottom:0;left:0;width:100%;height:62%;opacity:var(--silop);filter:blur(.5px)}.bg svg g{fill:var(--sil)}
+.bg:after{content:"";position:absolute;inset:0;opacity:var(--star);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M40 0L50 30 80 40 50 50 40 80 30 50 0 40 30 30Z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E")}
+:root.light .bg:after{filter:invert(.6)}
+.glass{background:var(--glass);border:1px solid var(--gb);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border-radius:var(--r);box-shadow:var(--shadow),inset 0 1px 0 var(--hi)}
+.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.i.s{width:14px;height:14px;vertical-align:-2px}
+.app{display:grid;grid-template-columns:72px minmax(0,1fr);gap:18px;padding:18px;max-width:1500px;margin:0 auto;min-height:100vh}
+.rail{position:sticky;top:18px;height:calc(100vh - 36px);display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0}
+.rail a{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:var(--fg);background:rgba(255,255,255,.06);transition:.2s;text-decoration:none}
+.rail a:hover{background:var(--glow)}.rail a.logo{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 6px 20px var(--glow);margin-bottom:6px}
+main{min-width:0}
+.top{position:sticky;top:12px;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 18px;margin-bottom:18px}
+.top .brand{min-width:0}.top b{font-size:1.05rem}.top .sub{color:var(--muted);font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .acts{margin-left:auto;display:flex;gap:8px;flex:none}
+.grid{display:grid;gap:18px;grid-template-columns:1fr}
+@media(min-width:1000px){.grid{grid-template-columns:1.15fr 1fr 1fr}.hero{grid-row:span 2}.prayers{grid-column:2/4;grid-row:span 2}.span3{grid-column:1/-1}}
+@media(min-width:700px) and (max-width:999px){.grid{grid-template-columns:1fr 1fr}.hero,.prayers,.span3{grid-column:1/-1}}
+.card{padding:20px;min-width:0;scroll-margin-top:90px}
+h2{margin:0 0 14px;font-size:.95rem;font-weight:650;display:flex;align-items:center;gap:8px}h2 .r{margin-left:auto;font-weight:400;font-size:.78rem;color:var(--muted)}
+h2 .i{color:var(--accent)}
+.hero{display:flex;flex-direction:column;justify-content:space-between;gap:18px;background:linear-gradient(140deg,rgba(255,138,61,.35),var(--glass));position:relative;overflow:hidden}
+.tagl{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.big{font-size:clamp(2.8rem,6vw,4.2rem);font-weight:800;letter-spacing:-.04em;line-height:1.05}
+.cd{font-size:clamp(2.2rem,4.5vw,3rem);font-variant-numeric:tabular-nums;font-weight:300;letter-spacing:-.02em}
+.prog{height:6px;border-radius:9px;background:var(--line);margin:12px 0 16px;overflow:hidden}.prog div{height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--soft),var(--accent));transition:width 1s linear}
+.cal{font-family:"Amiri","Noto Naskh Arabic","Scheherazade New",serif;font-size:30px;opacity:.45;text-align:right}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .muted{color:var(--muted);font-size:.82rem}
-.item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--card2);margin-bottom:8px;flex-wrap:wrap}
-.item .meta{flex:1;min-width:140px;overflow:hidden}.item .meta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.92rem}
-.tag{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:var(--glow);color:var(--accent)}
-.tag.link{background:color-mix(in srgb,#60a5fa 18%,transparent);color:#60a5fa}:root.light .tag.link{color:#1d4ed8}
-.warn{color:var(--warn);font-size:.8rem}
-audio{height:34px;max-width:220px;width:100%}
-.tabs{display:flex;gap:6px;margin-bottom:12px;background:var(--card2);padding:4px;border-radius:12px;width:max-content}
-.tabs button{background:transparent;color:var(--muted);padding:7px 12px}.tabs button.on{background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
-.drop{border:1.5px dashed var(--line);border-radius:14px;padding:14px;text-align:center;transition:border-color .2s}.drop:hover{border-color:var(--accent)}
-#log{max-height:280px;overflow:auto;font-size:.8rem}#log div{padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:10px}
-#log .t{color:var(--muted);font-variant-numeric:tabular-nums;flex:none}#log .error{color:var(--danger)}#log .play{color:var(--accent)}
-details summary{cursor:pointer;font-weight:650;font-size:.95rem;list-style:none}details summary::-webkit-details-marker{display:none}
-details summary::after{content:"▾";float:right;color:var(--muted);transition:.2s}details[open] summary::after{transform:rotate(180deg)}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(100px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.88rem;transition:.3s;z-index:9;max-width:90vw}.toast.show{transform:translateX(-50%)}
-.rem{display:block;font-size:.74rem;color:var(--muted);font-weight:500;margin-top:1px}
-.rlist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
-.rrow{display:grid;grid-template-columns:1fr 96px auto;gap:10px;align-items:center;padding:6px 12px;border-radius:12px;background:var(--card2)}
-.rrow.off .pn{opacity:.45}.rrow .pn{font-weight:600}
-.rhead{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:4px 0 10px;border-bottom:1px solid var(--line);margin-bottom:12px}
-section[id]{scroll-margin-top:80px}
-.sh{margin:4px 0 10px;font-size:.9rem;font-weight:650;display:flex;align-items:center;gap:8px}
-.ssec{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-#log .reminder{color:var(--warn)}
-.sticky{position:sticky;bottom:12px;display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
-
-/* mobile-first hardening */
-.grid>*,.card,.item .meta{min-width:0}
-html,body{overflow-x:hidden;max-width:100%}
-.wrap{padding:0 max(14px,env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
-.top{position:sticky;top:0;z-index:5;margin:0 -14px 14px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-button,.btn{min-height:44px;min-width:44px;justify-content:center}button.sm{min-height:44px;padding:8px 12px}
-input,select{font-size:16px;min-height:44px}input[type=range]{min-height:44px}
-input[type=file]{padding:10px;min-height:48px}input[type=file]::file-selector-button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:8px 12px;margin-right:10px;background:var(--accent);color:var(--onaccent)}
-.sw{width:52px;height:44px;display:flex;align-items:center}.sw span{inset:9px 0}.sw span::before{top:3px}
-.tabs{width:100%}.tabs button{flex:1}
-.card{padding:16px}.item audio{flex:1 1 100%;max-width:none}
-.prow{grid-template-columns:1fr auto auto}
-.opts{grid-template-columns:1fr 1fr}.opts select{grid-column:1/-1}
-@media(min-width:600px){.opts{grid-template-columns:1fr 120px auto}.opts select{grid-column:auto}.item audio{flex:0 1 220px}}
-.sticky{bottom:calc(12px + env(safe-area-inset-bottom))}.sticky button{box-shadow:var(--shadow)}
-.toast{bottom:calc(20px + env(safe-area-inset-bottom))}
-.ring{width:130px;height:130px}.ring svg{width:130px;height:130px}
-@media(min-width:600px){.ring{width:150px;height:150px}.ring svg{width:150px;height:150px}}
-
-/* library rows: one shared layout for FILE + LINK */
-.lib{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"tag meta" "act act";gap:8px 10px;align-items:start;padding:12px;border-radius:12px;background:var(--card2);margin-bottom:8px;border:1px solid transparent;transition:border-color .2s}
-.lib:hover{border-color:var(--line)}
-.lib>.tag{grid-area:tag;margin-top:2px;min-width:44px;text-align:center}
-.lib .meta{grid-area:meta;min-width:0;display:flex;flex-direction:column;gap:2px}
-.lib .meta b,.lib .meta .u{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.lib .meta b{font-size:.95rem}.lib .meta .u{color:var(--muted);font-size:.8rem}
-.lib .w{color:var(--warn);font-size:.8rem}.lib .w.ok{color:var(--accent)}.lib .w:empty{display:none}
-.lib .act{grid-area:act;display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}
-.lib .act audio{flex:1 1 100%;min-width:0;max-width:100%;height:44px;display:block}
-.lib .act .btns{display:flex;gap:8px;flex:0 0 auto;margin-left:auto}
+button{font:inherit;font-weight:600;font-size:.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;min-width:42px;padding:8px 16px;border-radius:999px;border:0;cursor:pointer;color:#fff;
+ background:linear-gradient(135deg,#ff9a4d,var(--accent2));box-shadow:0 6px 20px var(--glow);transition:transform .15s,filter .15s}
+button:hover{filter:brightness(1.07);transform:translateY(-1px)}button:active{transform:none}
+button.ghost{background:rgba(255,255,255,.1);color:var(--fg);border:1px solid var(--gb);box-shadow:none}:root.light button.ghost{background:rgba(255,255,255,.55)}
+button.danger{background:transparent;color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 45%,transparent);box-shadow:none}
+button.sm{padding:6px 12px;font-size:.8rem}button.ic{padding:0;width:42px}
+input,select{font:inherit;font-size:16px;width:100%;min-height:42px;padding:8px 12px;border-radius:12px;border:1px solid var(--gb);background:var(--glass2);color:var(--fg);transition:border-color .2s,box-shadow .2s}
+select option,select optgroup{background:#3a2419;color:#fff}:root.light select option,:root.light select optgroup{background:#fff;color:#2b1a10}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+input[type=range]{padding:0;border:0;background:none;accent-color:var(--accent);box-shadow:none}
+input[type=checkbox]{accent-color:var(--accent)}
+input[type=file]{padding:9px}input[type=file]::file-selector-button{font:inherit;font-weight:600;border:0;border-radius:99px;padding:7px 14px;margin-right:10px;background:var(--accent);color:#fff}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:.78rem;color:var(--muted);font-weight:500}
+.fg{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.sw{position:relative;width:44px;height:42px;flex:none;display:flex;align-items:center;cursor:pointer}.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw span{position:absolute;left:0;right:0;top:10px;height:22px;border-radius:99px;background:rgba(255,255,255,.2);transition:.2s}:root.light .sw span{background:rgba(90,50,20,.18)}
+.sw span::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw input:checked+span,:root.light .sw input:checked+span{background:var(--accent)}.sw input:checked+span::before{transform:translateX(22px)}.sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.plist{display:flex;flex-direction:column}
+.prow{display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}.prow .pn{font-weight:650;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.prow .pt{font-weight:650;font-variant-numeric:tabular-nums;font-size:1.02rem}
+.prow.next .pn{color:var(--soft)}.prow.off .pn,.prow.off .pt{opacity:.5}
+.prow.sun{grid-template-columns:1fr auto;font-size:.8rem;padding:8px 4px}
+.pill{font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#fff;padding:2px 8px;border-radius:99px}
+.rem{font-size:.74rem;font-weight:500;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+.opts{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) 92px auto;gap:8px;align-items:center}
+@media(max-width:520px){.opts{grid-template-columns:1fr 1fr}.opts select{grid-column:1/-1}}
+.tag{font-size:.64rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:var(--glow);color:var(--soft);display:inline-flex;align-items:center;gap:4px}
+.tag.link{background:rgba(96,165,250,.2);color:#93c5fd}:root.light .tag.link{color:#1d4ed8}
+.tabs{display:flex;gap:4px;margin-bottom:12px;background:var(--glass2);padding:4px;border-radius:99px}
+.tabs button{flex:1;background:transparent;color:var(--muted);box-shadow:none;min-height:38px}.tabs button.on{background:var(--accent);color:#fff}
+.drop{border:1.5px dashed var(--gb);border-radius:16px;padding:12px;text-align:center}
+.item,.lib{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--glass2);margin-bottom:8px;flex-wrap:wrap}
+.item .meta{flex:1;min-width:120px;overflow:hidden}.item .meta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;box-shadow:0 0 8px var(--ok)}
+.lib{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"tag meta" "act act";gap:8px 10px;align-items:start}
+.lib>.tag{grid-area:tag;margin-top:2px}.lib .meta{grid-area:meta;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lib .meta b,.lib .meta .u{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lib .meta b{font-size:.92rem}.lib .meta .u{color:var(--muted);font-size:.78rem}
+.lib .w{color:var(--warn);font-size:.78rem}.lib .w:empty{display:none}
+.lib .act{grid-area:act;display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}.lib .act audio{flex:1 1 220px;min-width:0;height:40px}
+.lib .act .btns{display:flex;gap:6px;margin-left:auto}
 @media(max-width:600px){.lib .act .btns{flex:1 1 100%}.lib .act .btns button{flex:1}}
-</style></head><body><div class="wrap">
-<div class="top"><div class="brand"><div class="logo">☾</div><div><h1>Adhan</h1><div class="sub" id="loc">…</div></div></div>
-<div class="row" style="flex-wrap:nowrap"><button class="ghost sm" onclick="openSettings()" aria-label="Settings" title="Settings">⚙️</button><button class="ghost sm" id="theme" onclick="toggleTheme()" aria-label="Toggle theme"></button></div></div>
+.sub-h{margin:4px 0 10px;font-size:.9rem;font-weight:650;display:flex;align-items:center;gap:8px}.sub-h .i{color:var(--accent)}.sub-h .r{margin-left:auto;font-weight:400;font-size:.76rem;color:var(--muted)}
+.ssec{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.sgrid{display:grid;gap:22px;grid-template-columns:1fr}@media(min-width:1000px){.sgrid{grid-template-columns:1fr 1fr}.sgrid .ssec{margin-top:0;padding-top:0;border-top:0}.sgrid .full{grid-column:1/-1;border-top:1px solid var(--line);padding-top:16px}}
+.rhead{display:flex;align-items:center;gap:10px;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.rlist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.rrow{display:grid;grid-template-columns:1fr 96px auto;gap:10px;align-items:center;padding:4px 12px;border-radius:12px;background:var(--glass2)}
+.rrow .pn{font-weight:600}.rrow.off .pn{opacity:.45}
+.chk{display:inline-flex;gap:6px;align-items:center}.chk input{width:auto;min-height:0}
+details summary{cursor:pointer;font-weight:650;font-size:.9rem;list-style:none;display:flex;align-items:center;gap:8px;min-height:40px}details summary::-webkit-details-marker{display:none}
+details summary .i{color:var(--accent)}details summary .chev{margin-left:auto;color:var(--muted);transition:.2s}details[open] summary .chev{transform:rotate(180deg)}
+.bar{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
+#log{max-height:300px;overflow:auto;font-size:.8rem}#log div{padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:10px}
+#log .t{color:var(--muted);font-variant-numeric:tabular-nums;flex:none}#log .error{color:var(--danger)}#log .play{color:var(--soft)}#log .reminder{color:var(--warn)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(140px);background:rgba(30,18,12,.92);color:#fff;padding:10px 18px;border-radius:99px;font-size:.86rem;transition:.3s;z-index:20;max-width:90vw;border:1px solid rgba(255,255,255,.15)}.toast.show{transform:translateX(-50%)}
+@media(max-width:699px){
+ .app{grid-template-columns:1fr;gap:12px;padding:0 max(10px,env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+ .rail{position:fixed;top:auto;height:auto;bottom:calc(10px + env(safe-area-inset-bottom));left:10px;right:10px;flex-direction:row;justify-content:space-around;padding:8px;z-index:10;gap:4px}
+ .rail a.logo{display:none}
+ .top{top:0;margin:0 -10px 12px;border-radius:0 0 18px 18px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px}
+ .top .tn{display:none}.card{padding:16px}.grid{gap:12px}.cal{font-size:24px}
+ .toast{bottom:calc(90px + env(safe-area-inset-bottom))}
+}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-mosque" viewBox="0 0 24 24"><path d="M3 21h18M5 21V11M19 21V11M4 11l1-4 1 4M18 11l1-4 1 4M8 21v-6a4 4 0 0 1 8 0v6M8 13c0-3 4-4 4-7 0 3 4 4 4 7M12 3v3"/></symbol>
+<symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+<symbol id="i-hands" viewBox="0 0 24 24"><path d="M12 21c-3 0-6-2-6-6V8a1.5 1.5 0 0 1 3 0v5M12 21c3 0 6-2 6-6V8a1.5 1.5 0 0 0-3 0v5M9 11V5a1.5 1.5 0 0 1 3 0v6M15 11V5a1.5 1.5 0 0 0-3 0"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M17 18a5 5 0 0 0-10 0M12 2v7M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M8 6l4-4 4 4"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+</defs></svg>
+<div class="bg"><svg viewBox="0 0 1440 500" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><g>
+<rect x="0" y="440" width="1440" height="60"/><path d="M560 440V300q0-90 160-150 160 60 160 150v140Z"/><rect x="716" y="110" width="8" height="45"/><circle cx="720" cy="104" r="7"/>
+<rect x="430" y="200" width="34" height="240"/><path d="M425 200l22-60 22 60Z"/><rect x="438" y="250" width="18" height="6"/><rect x="976" y="200" width="34" height="240"/><path d="M971 200l22-60 22 60Z"/><rect x="984" y="250" width="18" height="6"/>
+<path d="M470 440v-80q0-50 70-70 70 20 70 70v80Z"/><path d="M830 440v-80q0-50 70-70 70 20 70 70v80Z"/>
+<path d="M120 440v-50q0-30 45-45 45 15 45 45v50Z"/><rect x="230" y="300" width="20" height="140"/><path d="M226 300l14-40 14 40Z"/>
+<path d="M1230 440v-50q0-30 45-45 45 15 45 45v50Z"/><rect x="1190" y="300" width="20" height="140"/><path d="M1186 300l14-40 14 40Z"/></g></svg></div>
+<div class="app">
+<nav class="rail glass" aria-label="Sections"><a class="logo" href="#hero" title="Adhan"><svg class="i"><use href="#i-moon"/></svg></a>
+<a href="#prayers" title="Prayers"><svg class="i"><use href="#i-mosque"/></svg></a><a href="#speakers" title="Speakers"><svg class="i"><use href="#i-speaker"/></svg></a>
+<a href="#library" title="Library"><svg class="i"><use href="#i-music"/></svg></a><a href="#reminders" onclick="openSettings(false)" title="Reminders"><svg class="i"><use href="#i-bell"/></svg></a>
+<a href="#settings" onclick="event.preventDefault();openSettings()" title="Settings"><svg class="i"><use href="#i-gear"/></svg></a></nav>
+<main>
+<header class="top glass"><div class="brand"><b>Adhan</b> <div class="sub" id="loc">…</div></div>
+<div class="acts"><button class="ghost ic" onclick="openSettings()" aria-label="Settings" title="Settings"><svg class="i"><use href="#i-gear"/></svg></button>
+<button class="ghost" id="theme" onclick="toggleTheme()" aria-label="Toggle theme"></button><button class="tn" onclick="test()"><svg class="i s"><use href="#i-play"/></svg>Test now</button></div></header>
 <div class="grid">
-<section class="card hero span2"><div class="ring"><svg viewBox="0 0 150 150"><circle cx="75" cy="75" r="66" stroke="var(--line)" stroke-width="9" fill="none"/><circle id="arc" cx="75" cy="75" r="66" stroke="var(--accent)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="414.7" style="transition:stroke-dashoffset 1s linear"/></svg><div class="c"><div><div class="cd" id="countdown">--:--:--</div><div class="muted">remaining</div></div></div></div>
-<div style="position:relative;z-index:1"><div class="lbl">Next prayer</div><div class="name" id="nextname">—</div><div class="at" id="nextat"></div>
-<div class="row" style="margin-top:14px"><button onclick="test()">▶ Test now</button><button class="ghost" onclick="stopAll()">■ Stop</button></div></div></section>
+<section class="card glass hero" id="hero"><div><div class="tagl">Next prayer</div><div class="big" id="nextname">—</div><div class="muted" id="nextat" style="font-size:.95rem"></div></div>
+<div><div class="cd" id="countdown">--:--:--</div><div class="muted">remaining</div><div class="prog"><div id="bar"></div></div>
+<div class="row"><button onclick="test()"><svg class="i s"><use href="#i-play"/></svg>Test now</button><button class="ghost" onclick="stopAll()"><svg class="i s"><use href="#i-stop"/></svg>Stop</button></div></div>
+<div class="cal">ٱللَّٰهُ أَكْبَرُ</div></section>
 
-<section class="card"><h2>🕰 Today's prayers <span class="muted" id="src" style="margin-left:auto;font-weight:400"></span></h2><div class="plist" id="plist"></div>
-<div class="sticky"><button onclick="saveAll()">Save changes</button></div></section>
+<section class="card glass prayers" id="prayers"><h2><svg class="i"><use href="#i-clock"/></svg>Today's prayers <span class="r" id="src"></span></h2><div class="plist" id="plist"></div>
+<div class="bar"><button onclick="saveAll()"><svg class="i s"><use href="#i-check"/></svg>Save changes</button></div></section>
 
-<div style="display:flex;flex-direction:column;gap:14px">
-<section class="card"><h2>🎵 Adhan library</h2>
-<div class="tabs"><button class="on" id="tabU" onclick="tab('U')">Upload MP3</button><button id="tabL" onclick="tab('L')">Add link</button></div>
+<section class="card glass" id="speakers"><h2><svg class="i"><use href="#i-speaker"/></svg>Speakers <span class="r" id="dstat"></span></h2>
+<div class="row"><button class="ghost sm" onclick="discover()"><svg class="i s"><use href="#i-search"/></svg>Discover</button></div>
+<div id="found" style="margin-top:10px"></div><div class="muted" style="margin:10px 0 6px">Selected</div><div id="selected"></div>
+<div class="fg" style="margin-top:8px"><label class="f">Name (optional)<input id="mname"></label><label class="f">Speaker IP<input id="mhost" placeholder="192.168.1.50"></label></div>
+<div class="row" style="margin-top:8px"><button class="ghost sm" onclick="addManual()"><svg class="i s"><use href="#i-plus"/></svg>Add by IP</button></div></section>
+
+<section class="card glass" id="library"><h2><svg class="i"><use href="#i-music"/></svg>Adhan library</h2>
+<div class="tabs"><button class="on" id="tabU" onclick="tab('U')"><svg class="i s"><use href="#i-upload"/></svg>Upload MP3</button><button id="tabL" onclick="tab('L')"><svg class="i s"><use href="#i-link"/></svg>Add link</button></div>
 <div id="paneU"><div class="drop"><input type="file" id="file" accept=".mp3,audio/mpeg,audio/mp3,audio/*"><div class="row" style="justify-content:center;margin-top:8px"><button onclick="upload()">Upload</button></div></div></div>
 <div id="paneL" hidden><div class="fg"><label class="f">Name<input id="lname" placeholder="e.g. Makkah Adhan"></label><label class="f">Audio URL (http/https)<input id="lurl" placeholder="https://example.com/adhan.mp3"></label></div>
 <div class="row" style="margin-top:10px"><button onclick="addLink()">Add link</button><span class="muted">Speakers stream the URL directly; it must be reachable from them.</span></div></div>
-<div style="margin-top:14px" id="library"></div></section>
+<div style="margin-top:14px" id="libitems"></div></section>
 
-<section class="card"><h2>🔊 Speakers</h2><div class="row"><button class="ghost" onclick="discover()">🔍 Discover</button><span id="dstat" class="muted"></span></div>
-<div id="found" style="margin-top:10px"></div><div class="muted" style="margin:10px 0 6px">Selected</div><div id="selected"></div>
-<div class="fg" style="margin-top:8px"><label class="f">Name (optional)<input id="mname"></label><label class="f">Speaker IP<input id="mhost" placeholder="192.168.1.50"></label></div>
-<div class="row" style="margin-top:8px"><button class="ghost sm" onclick="addManual()">＋ Add by IP</button></div></section>
-</div>
-
-<section class="card"><h2>🎚 Playback</h2><div class="fg"><label class="f">Default adhan<select id="default_media"></select></label>
+<section class="card glass" id="playback"><h2><svg class="i"><use href="#i-sliders"/></svg>Playback</h2><div class="fg"><label class="f">Default adhan<select id="default_media"></select></label>
 <label class="f">Global volume <span id="gv"></span><input type="range" min="0" max="1" step="0.05" id="global_volume"></label></div>
-<div class="sticky"><button onclick="saveAll()">Save</button></div></section>
+<div class="bar"><button onclick="saveAll()">Save</button></div></section>
 
-<section class="card span2" id="settings"><h2>⚙️ Settings</h2>
-<div id="reminders"><h3 class="sh">🔔 Reminders <span class="muted" style="margin-left:auto;font-weight:400">before each adhan</span></h3>
+<section class="card glass span3" id="settings"><h2><svg class="i"><use href="#i-gear"/></svg>Settings</h2><div class="sgrid">
+<div id="reminders" class="ssec"><h3 class="sub-h"><svg class="i"><use href="#i-bell"/></svg>Reminders <span class="r">before each adhan</span></h3>
 <div class="rhead"><div><b>Pre-adhan reminder</b><div class="muted">e.g. “Dhuhr adhan in 15 minutes”, on the same speakers</div></div><label class="sw" title="Enable reminders"><input type="checkbox" id="r_enabled" onchange="$('rbody').style.opacity=this.checked?1:.5"><span></span></label></div>
 <div id="rbody"><div class="fg"><label class="f">Minutes before (1–120)<input id="r_minutes" type="number" min="1" max="120" inputmode="numeric"></label>
 <label class="f">Reminder sound<select id="r_sound"></select></label>
 <label class="f">Reminder volume <span id="rv"></span><input type="range" min="0" max="1" step="0.05" id="r_volume"></label></div>
-<div class="muted" style="margin-top:6px"><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="r_volglobal" style="width:auto;min-height:0"> Use global volume</label></div>
+<div class="muted" style="margin-top:6px"><label class="chk"><input type="checkbox" id="r_volglobal"> Use global volume</label></div>
 <div class="rlist" id="rlist"></div></div>
-<div class="sticky"><button class="ghost" onclick="testReminder()">▶ Test reminder</button><button onclick="saveAll()">Save</button></div></div>
+<div class="bar"><button class="ghost" onclick="testReminder()"><svg class="i s"><use href="#i-play"/></svg>Test reminder</button><button onclick="saveAll()">Save</button></div></div>
 
-<div id="afterad" class="ssec"><h3 class="sh">🤲 After adhan <span class="muted" style="margin-left:auto;font-weight:400">e.g. dua after adhan</span></h3>
+<div id="afterad" class="ssec"><h3 class="sub-h"><svg class="i"><use href="#i-hands"/></svg>After adhan <span class="r">e.g. dua after adhan</span></h3>
 <div class="rhead"><div><b>Play after the adhan</b><div class="muted">Starts on the same speakers once the adhan finishes; skipped if you press Stop</div></div><label class="sw" title="Enable after-adhan"><input type="checkbox" id="a_enabled" onchange="$('abody').style.opacity=this.checked?1:.5"><span></span></label></div>
 <div id="abody"><div class="fg"><label class="f">Play<select id="a_media"></select></label>
 <label class="f">Gap after adhan (seconds)<input id="a_gap" type="number" min="0" max="60" inputmode="numeric"></label>
 <label class="f">Volume <span id="av"></span><input type="range" min="0" max="1" step="0.05" id="a_volume"></label></div>
-<div class="muted" style="margin-top:6px"><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="a_volglobal" style="width:auto;min-height:0"> Use global volume</label></div>
+<div class="muted" style="margin-top:6px"><label class="chk"><input type="checkbox" id="a_volglobal"> Use global volume</label></div>
 <div class="rlist" id="alist"></div></div>
-<div class="sticky"><button class="ghost" onclick="testAfter()">▶ Test</button><button onclick="saveAll()">Save</button></div></div>
+<div class="bar"><button class="ghost" onclick="testAfter()"><svg class="i s"><use href="#i-play"/></svg>Test</button><button onclick="saveAll()">Save</button></div></div>
 
-<details id="setdet" class="ssec"><summary>📍 Location, method &amp; network</summary><div style="margin-top:14px" class="fg">
+<details id="setdet" class="ssec full"><summary><svg class="i"><use href="#i-pin"/></svg>Location, method &amp; network<svg class="i chev"><use href="#i-chev"/></svg></summary><div style="margin-top:14px" class="fg">
 <label class="f">Location name<input id="location_name"></label><label class="f">Latitude<input id="latitude" inputmode="decimal"></label><label class="f">Longitude<input id="longitude" inputmode="decimal"></label>
 <label class="f">Timezone<input id="timezone"></label><label class="f">Method<select id="method"></select></label>
 <label class="f">Asr<select id="madhab"><option value="HANAFI">Hanafi (later)</option><option value="SHAFI">Shafi / standard</option></select></label>
 <label class="f">Times source<select id="source"><option value="local">Local (offline)</option><option value="aladhan">Aladhan API</option></select></label>
 <label class="f">Host LAN IP override<input id="host_ip_override"></label></div>
-<div class="muted" id="ipinfo" style="margin-top:10px"></div><div class="sticky"><button onclick="saveAll()">Save settings</button></div></details></section>
+<div class="muted" id="ipinfo" style="margin-top:10px"></div><div class="bar"><button onclick="saveAll()">Save settings</button></div></details></div></section>
 
-<section class="card span2"><h2>📜 Recent activity</h2><div id="log"></div></section>
-</div></div><div class="toast" id="toast"></div>
+<section class="card glass span3" id="activity"><h2><svg class="i"><use href="#i-list"/></svg>Recent activity</h2><div id="log"></div></section>
+</div></main></div><div class="toast" id="toast"></div>
 <script>
+const ic=(n,c='i s')=>`<svg class="${c}"><use href="#i-${n}"/></svg>`;
 const P=['fajr','dhuhr','asr','maghrib','isha'];let W={},S={},M=[],T=null,nextAt=null,span=1;
 const $=id=>document.getElementById(id),cap=s=>s[0].toUpperCase()+s.slice(1),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),3500)}
-function setThemeLbl(){$('tc').content=document.documentElement.classList.contains('light')?'#eef3f1':'#0b1110';$('theme').textContent=document.documentElement.classList.contains('light')?'🌙 Dark':'☀️ Light'}
+function setThemeLbl(){const l=document.documentElement.classList.contains('light');$('tc').content=l?'#fbe9d6':'#2a1a12';$('theme').innerHTML=l?ic('moon')+'Dark':ic('sun')+'Light'}
 function toggleTheme(){const l=document.documentElement.classList.toggle('light');localStorage.theme=l?'light':'dark';setThemeLbl()}
 function tab(x){['U','L'].forEach(k=>{$('tab'+k).classList.toggle('on',k==x);$('pane'+k).hidden=k!=x})}
-async function api(u,o={}){const r=await fetch(u,o);if(!r.ok){let t=await r.text();try{t=JSON.parse(t).detail}catch(e){}toast('⚠️ '+t);throw t}return r.json()}
+async function api(u,o={}){const r=await fetch(u,o);if(!r.ok){let t=await r.text();try{t=JSON.parse(t).detail}catch(e){}toast('Error: '+t);throw t}return r.json()}
 const J=b=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
 const fmt=iso=>new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',timeZone:S.timezone});
 function options(sel,blank){const L=S.links||[];return (blank?`<option value="">${blank}</option>`:'')+
- (M.length?`<optgroup label="Uploaded files">${M.map(m=>`<option value="${esc(m.name)}" ${m.name==sel?'selected':''}>📁 ${esc(m.name)}</option>`).join('')}</optgroup>`:'')+
- (L.length?`<optgroup label="Audio links">${L.map(l=>`<option value="link:${l.id}" ${'link:'+l.id==sel?'selected':''}>🔗 ${esc(l.name)}</option>`).join('')}</optgroup>`:'')}
+ (M.length?`<optgroup label="Uploaded files">${M.map(m=>`<option value="${esc(m.name)}" ${m.name==sel?'selected':''}>File · ${esc(m.name)}</option>`).join('')}</optgroup>`:'')+
+ (L.length?`<optgroup label="Audio links">${L.map(l=>`<option value="link:${l.id}" ${'link:'+l.id==sel?'selected':''}>Link · ${esc(l.name)}</option>`).join('')}</optgroup>`:'')}
 function renderPrayers(){if(!T||!S.prayers)return;const nx=T.next&&T.next.time.slice(0,10)==T.date?T.next.prayer:null;
- $('plist').innerHTML=['fajr','sunrise',...P.slice(1)].map(p=>{if(p=='sunrise')return `<div class="prow sun"><div class="pn muted">☀ Sunrise</div><div class="pt muted">${fmt(T.times.sunrise)}</div></div>`;
- const c=S.prayers[p],rt=T.reminders&&T.reminders[p];return `<div class="prow ${p==nx?'next':''} ${c.enabled?'':'off'}" id="row_${p}"><div class="pn">${cap(p)} ${p==nx?'<span class="tag">Next</span>':''}${rt?`<span class="rem">🔔 ${fmt(rt)}</span>`:''}</div><div class="pt">${fmt(T.times[p])}</div>
+ $('plist').innerHTML=['fajr','sunrise',...P.slice(1)].map(p=>{if(p=='sunrise')return `<div class="prow sun"><div class="muted">${ic('sunrise')} Sunrise</div><div class="pt muted">${fmt(T.times.sunrise)}</div></div>`;
+ const c=S.prayers[p],rt=T.reminders&&T.reminders[p];return `<div class="prow ${p==nx?'next':''} ${c.enabled?'':'off'}" id="row_${p}"><div class="pn">${cap(p)} ${p==nx?'<span class="pill">Next</span>':''}${rt?`<span class="rem">${ic('bell')}${fmt(rt)}</span>`:''}</div><div class="pt">${fmt(T.times[p])}</div>
  <label class="sw" title="Enable adhan"><input type="checkbox" id="en_${p}" ${c.enabled?'checked':''} onchange="$('row_${p}').classList.toggle('off',!this.checked)"><span></span></label>
- <div class="opts"><select id="md_${p}" aria-label="${p} adhan">${options(c.media,'Default adhan')}</select><input id="vo_${p}" type="number" min="0" max="100" placeholder="Vol %" title="Volume %, blank = global" value="${c.volume==null?'':Math.round(c.volume*100)}"><button class="ghost sm" onclick="test('${p}')">▶ Test</button></div></div>`}).join('')}
+ <div class="opts"><select id="md_${p}" aria-label="${p} adhan">${options(c.media,'Default adhan')}</select><input id="vo_${p}" type="number" min="0" max="100" placeholder="Vol %" title="Volume %, blank = global" value="${c.volume==null?'':Math.round(c.volume*100)}"><button class="ghost sm" onclick="test('${p}')">${ic('play')}Test</button></div></div>`}).join('')}
 async function loadTimes(){T=await api('/api/times');$('loc').textContent=`${T.location} · ${new Date(T.date+'T12:00').toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'})}`;
  $('src').textContent=`${T.method.replace(/_/g,' ').toLowerCase()} · Asr ${T.madhab.toLowerCase()}`;
- if(T.next){nextAt=Date.now()+T.next.seconds*1000;$('nextname').textContent=cap(T.next.prayer);const rt=T.next.time.slice(0,10)==T.date&&T.reminders&&T.reminders[T.next.prayer];$('nextat').innerHTML=esc(fmt(T.next.time)+(T.next.time.slice(0,10)!=T.date?' · tomorrow':''))+(rt?` <span class="muted">· 🔔 ${esc(fmt(rt))}</span>`:'');
+ if(T.next){nextAt=Date.now()+T.next.seconds*1000;$('nextname').textContent=cap(T.next.prayer);const rt=T.next.time.slice(0,10)==T.date&&T.reminders&&T.reminders[T.next.prayer];$('nextat').innerHTML=esc(fmt(T.next.time)+(T.next.time.slice(0,10)!=T.date?' · tomorrow':''))+(rt?` · ${ic('bell')} reminder ${esc(fmt(rt))}`:'');
   const order=P.map(p=>new Date(T.times[p]).getTime()),nt=new Date(T.next.time).getTime(),prev=order.filter(x=>x<nt).pop()??(new Date(T.times.isha).getTime());span=Math.max(60000,nt-prev)}
  renderPrayers()}
 function tick(){if(!nextAt)return;const ms=Math.max(0,nextAt-Date.now()),s=Math.round(ms/1000);if(s==0)setTimeout(loadTimes,3000);
  $('countdown').textContent=[Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(x=>String(x).padStart(2,'0')).join(':');
- $('arc').style.strokeDashoffset=414.7*Math.min(1,ms/span)}
+ $('bar').style.width=(100*(1-Math.min(1,ms/span))).toFixed(1)+'%'}
 function renderLibrary(){const L=S.links||[];
- const row=(kind,title,sub,src,ref,extra,del)=>`<div class="lib"><span class="tag ${kind=='Link'?'link':''}">${kind}</span><div class="meta"><b title="${esc(title)}">${esc(title)}</b><span class="u" title="${esc(sub)}">${esc(sub)}</span>${extra}</div>
- <div class="act"><audio controls preload="none" src="${esc(src)}"></audio><div class="btns">${kind=='Link'?`<button class="ghost sm" onclick="recheck('${ref.slice(5)}')">Check</button>`:''}<button class="ghost sm" onclick="testMedia('${esc(ref)}')" title="Play on speakers">▶ Test</button><button class="danger sm" onclick="${del}">Delete</button></div></div></div>`;
- $('library').innerHTML=(M.map(m=>row('File',m.name,(m.size/1048576).toFixed(2)+' MB · uploaded',m.url,m.name,'',`delMedia('${esc(m.name)}')`)).join('')+
+ const row=(kind,title,sub,src,ref,extra,del)=>`<div class="lib"><span class="tag ${kind=='Link'?'link':''}">${ic(kind=='Link'?'link':'file')}${kind}</span><div class="meta"><b title="${esc(title)}">${esc(title)}</b><span class="u" title="${esc(sub)}">${esc(sub)}</span>${extra}</div>
+ <div class="act"><audio controls preload="none" src="${esc(src)}"></audio><div class="btns">${kind=='Link'?`<button class="ghost sm" onclick="recheck('${ref.slice(5)}')">Check</button>`:''}<button class="ghost sm" onclick="testMedia('${esc(ref)}')" title="Play on speakers">${ic('play')}Test</button><button class="danger sm" onclick="${del}">${ic('trash')}Delete</button></div></div></div>`;
+ $('libitems').innerHTML=(M.map(m=>row('File',m.name,(m.size/1048576).toFixed(2)+' MB · uploaded',m.url,m.name,'',`delMedia('${esc(m.name)}')`)).join('')+
  L.map(l=>row('Link',l.name,l.url,l.url,'link:'+l.id,`<span class="w" id="w_${l.id}">${esc(W[l.id]||'')}</span>`,`delLink('${l.id}')`)).join(''))||'<div class="muted">No adhan yet — upload an MP3 or add a link.</div>'}
 function render(){$('default_media').innerHTML=options(S.default_media,'— none —');$('global_volume').value=S.global_volume;$('gv').textContent=Math.round(S.global_volume*100)+'%';
  ['location_name','latitude','longitude','timezone','madhab','source','host_ip_override'].forEach(k=>$(k).value=S[k]);
  $('method').innerHTML=S.methods.map(m=>`<option value="${m}" ${m==S.method?'selected':''}>${m.replace(/_/g,' ')}${m=='NORTH_AMERICA'?' (ISNA)':''}</option>`).join('');
  $('host_ip_override').placeholder='auto: '+S.detected_ip;$('ipinfo').textContent=`Speakers fetch uploads from http://${S.host_ip_override||S.detected_ip}:${S.port}/media/…`+(S.mock?' · MOCK CAST MODE':'');
- $('selected').innerHTML=S.speakers.map((s,i)=>`<div class="item">🔊<div class="meta"><b>${esc(s.name||s.host)}</b><span class="muted">${esc(s.host||'by name')}</span></div><button class="danger sm" onclick="S.speakers.splice(${i},1);saveAll()">Remove</button></div>`).join('')||'<div class="muted">None selected yet.</div>';
+ $('selected').innerHTML=S.speakers.map((s,i)=>`<div class="item"><span class="dot"></span><div class="meta"><b>${esc(s.name||s.host)}</b><span class="muted">${esc(s.host||'by name')}</span></div><button class="danger sm" onclick="S.speakers.splice(${i},1);saveAll()">Remove</button></div>`).join('')||'<div class="muted">None selected yet.</div>';
  renderLibrary();renderPrayers();renderReminders();renderAfter()}
 function renderAfter(){const A=S.after_adhan;$('a_enabled').checked=A.enabled;$('abody').style.opacity=A.enabled?1:.5;$('a_media').innerHTML=options(A.media,'— choose from library —');$('a_gap').value=A.gap;
  $('a_volglobal').checked=A.volume==null;$('a_volume').value=A.volume??S.global_volume;$('a_volume').disabled=A.volume==null;$('av').textContent=Math.round((A.volume??S.global_volume)*100)+'%';
@@ -207,34 +245,34 @@ function renderAfter(){const A=S.after_adhan;$('a_enabled').checked=A.enabled;$(
 function collectAfter(){const A=S.after_adhan,g=parseInt($('a_gap').value);A.enabled=$('a_enabled').checked;A.media=$('a_media').value;A.gap=Math.min(60,Math.max(0,isNaN(g)?2:g));
  A.volume=$('a_volglobal').checked?null:+$('a_volume').value;P.forEach(p=>A.prayers[p]=$('ae_'+p).checked)}
 async function testAfter(){collectAfter();if(!S.after_adhan.media)return toast('Choose an item from the library first');
- const r=await api('/api/after/test',J({media:S.after_adhan.media,volume:S.after_adhan.volume}));toast(r.ok?'▶ Sent to speakers':'⚠ Check the activity log');setTimeout(loadLog,1200)}
+ const r=await api('/api/after/test',J({media:S.after_adhan.media,volume:S.after_adhan.volume}));toast(r.ok?'Sent to speakers':'Failed - check the activity log');setTimeout(loadLog,1200)}
 function renderReminders(){const R=S.reminders;$('r_enabled').checked=R.enabled;$('rbody').style.opacity=R.enabled?1:.5;$('r_minutes').value=R.minutes;
- $('r_sound').innerHTML=`<option value="tts" ${R.sound=='tts'?'selected':''}>🗣 Spoken announcement</option>`+options(R.sound);
+ $('r_sound').innerHTML=`<option value="tts" ${R.sound=='tts'?'selected':''}>Spoken announcement</option>`+options(R.sound);
  $('r_volglobal').checked=R.volume==null;$('r_volume').value=R.volume??S.global_volume;$('r_volume').disabled=R.volume==null;$('rv').textContent=Math.round((R.volume??S.global_volume)*100)+'%';
  $('rlist').innerHTML=P.map(p=>{const c=R.prayers[p];return `<div class="rrow ${c.enabled?'':'off'}" id="rr_${p}"><div class="pn">${cap(p)}</div><input id="rm_${p}" type="number" min="1" max="120" placeholder="${R.minutes} min" title="Minutes override, blank = default" value="${c.minutes??''}"><label class="sw" title="Remind before ${p}"><input type="checkbox" id="re_${p}" ${c.enabled?'checked':''} onchange="$('rr_${p}').classList.toggle('off',!this.checked)"><span></span></label></div>`}).join('')}
 function collectReminders(){const R=S.reminders,m=parseInt($('r_minutes').value);R.enabled=$('r_enabled').checked;R.minutes=Math.min(120,Math.max(1,isNaN(m)?15:m));R.sound=$('r_sound').value||'tts';
  R.volume=$('r_volglobal').checked?null:+$('r_volume').value;P.forEach(p=>{const v=$('rm_'+p).value;R.prayers[p]={enabled:$('re_'+p).checked,minutes:v===''?null:Math.min(120,Math.max(1,parseInt(v)))}})}
 async function testReminder(){collectReminders();const nx=T&&T.next?T.next.prayer:'dhuhr',R=S.reminders,m=R.prayers[nx].minutes??R.minutes;
- const r=await api('/api/reminder/test',J({prayer:nx,minutes:m,sound:R.sound,volume:R.volume}));toast(r.ok?'🔔 '+r.text:'⚠ Check the activity log');setTimeout(loadLog,1200)}
-function openSettings(){$('setdet').open=true;$('settings').scrollIntoView({behavior:'smooth',block:'start'})}
+ const r=await api('/api/reminder/test',J({prayer:nx,minutes:m,sound:R.sound,volume:R.volume}));toast(r.ok?'Reminder: '+r.text:'Failed - check the activity log');setTimeout(loadLog,1200)}
+function openSettings(scroll=true){$('setdet').open=true;if(scroll)$('settings').scrollIntoView({behavior:'smooth',block:'start'})}
 async function loadAll(){M=await api('/api/media');S=await api('/api/settings');render()}
 function collect(){P.forEach(p=>{if(!$('en_'+p))return;const v=$('vo_'+p).value;S.prayers[p]={enabled:$('en_'+p).checked,media:$('md_'+p).value,volume:v===''?null:Math.min(100,Math.max(0,v))/100}});
  S.default_media=$('default_media').value;S.global_volume=+$('global_volume').value;
  ['location_name','timezone','method','madhab','source','host_ip_override'].forEach(k=>S[k]=$(k).value.trim());S.latitude=+$('latitude').value;S.longitude=+$('longitude').value;if(S.reminders&&$('r_minutes'))collectReminders();if(S.after_adhan&&$('a_gap'))collectAfter()}
-async function saveAll(){collect();const {methods,detected_ip,mock,...body}=S;S=await api('/api/settings',{...J(body),method:'PUT'});render();await loadTimes();loadLog();toast('✓ Saved')}
-async function upload(){const f=$('file').files[0];if(!f)return toast('Choose an MP3 first');const fd=new FormData();fd.append('file',f);await api('/api/media',{method:'POST',body:fd});$('file').value='';await loadAll();loadLog();toast('✓ Uploaded '+f.name)}
+async function saveAll(){collect();const {methods,detected_ip,mock,...body}=S;S=await api('/api/settings',{...J(body),method:'PUT'});render();await loadTimes();loadLog();toast('Saved')}
+async function upload(){const f=$('file').files[0];if(!f)return toast('Choose an MP3 first');const fd=new FormData();fd.append('file',f);await api('/api/media',{method:'POST',body:fd});$('file').value='';await loadAll();loadLog();toast('Uploaded '+f.name)}
 async function delMedia(n){if(!confirm('Delete '+n+'?'))return;await api('/api/media/'+encodeURIComponent(n),{method:'DELETE'});await loadAll();loadLog()}
 async function addLink(){const r=await api('/api/links',J({name:$('lname').value,url:$('lurl').value}));$('lname').value=$('lurl').value='';await loadAll();loadLog();
- W[r.id]=r.warning?'⚠ '+r.warning:'';renderLibrary();if(r.warning){toast('Link saved, but: '+r.warning)}else toast('✓ Link added and reachable')}
-async function recheck(id){const l=S.links.find(x=>x.id==id);W[id]='checking…';renderLibrary();const r=await api('/api/links/check',J({url:l.url}));W[id]=r.warning?'⚠ '+r.warning:'✓ reachable';renderLibrary()}
+ W[r.id]=r.warning?'Warning: '+r.warning:'';renderLibrary();if(r.warning){toast('Link saved, but: '+r.warning)}else toast('Link added and reachable')}
+async function recheck(id){const l=S.links.find(x=>x.id==id);W[id]='checking…';renderLibrary();const r=await api('/api/links/check',J({url:l.url}));W[id]=r.warning?'Warning: '+r.warning:'Reachable';renderLibrary()}
 async function delLink(id){if(!confirm('Delete this link?'))return;await api('/api/links/'+id,{method:'DELETE'});await loadAll();loadLog()}
 async function discover(){$('dstat').textContent='Searching (~8s)…';try{const d=await api('/api/speakers/discover');$('dstat').textContent=d.length+' found';
- $('found').innerHTML=d.map(s=>`<div class="item">📡<div class="meta"><b>${esc(s.name)}</b><span class="muted">${esc(s.host)} · ${esc(s.model||'')}</span></div><button class="sm" onclick='addSp(${JSON.stringify({name:s.name,host:s.host})})'>Add</button></div>`).join('')}catch(e){$('dstat').textContent='Discovery failed'}}
+ $('found').innerHTML=d.map(s=>`<div class="item">${ic('speaker','i')}<div class="meta"><b>${esc(s.name)}</b><span class="muted">${esc(s.host)} · ${esc(s.model||'')}</span></div><button class="sm" onclick='addSp(${JSON.stringify({name:s.name,host:s.host})})'>Add</button></div>`).join('')}catch(e){$('dstat').textContent='Discovery failed'}}
 function addSp(s){collect();if(!S.speakers.some(x=>x.host==s.host&&x.name==s.name))S.speakers.push(s);saveAll()}
 function addManual(){const h=$('mhost').value.trim();if(!h)return toast('Enter the speaker IP');addSp({name:$('mname').value.trim(),host:h});$('mhost').value=$('mname').value=''}
-async function test(p){const r=await api('/api/test',J(p?{prayer:p}:{}));toast(r.ok?'▶ Sent to speakers':'⚠ Check the activity log');setTimeout(loadLog,1200)}
-async function testMedia(m){const r=await api('/api/test',J({media:m}));toast(r.ok?'▶ Sent to speakers':'⚠ Check the activity log');setTimeout(loadLog,1200)}
-async function stopAll(){await api('/api/stop',{method:'POST'});toast('■ Stopped')}
+async function test(p){const r=await api('/api/test',J(p?{prayer:p}:{}));toast(r.ok?'Sent to speakers':'Failed - check the activity log');setTimeout(loadLog,1200)}
+async function testMedia(m){const r=await api('/api/test',J({media:m}));toast(r.ok?'Sent to speakers':'Failed - check the activity log');setTimeout(loadLog,1200)}
+async function stopAll(){await api('/api/stop',{method:'POST'});toast('Stopped')}
 async function loadLog(){const l=await api('/api/log');$('log').innerHTML=l.slice(0,60).map(e=>`<div><span class="t">${e.time.slice(5,16).replace('T',' ')}</span><span class="${e.kind}">${esc(e.msg)}</span></div>`).join('')||'<div class="muted">Nothing yet.</div>'}
 $('a_volume').oninput=e=>$('av').textContent=Math.round(e.target.value*100)+'%';$('a_volglobal').onchange=e=>{$('a_volume').disabled=e.target.checked};
 $('r_volume').oninput=e=>$('rv').textContent=Math.round(e.target.value*100)+'%';$('r_volglobal').onchange=e=>{$('r_volume').disabled=e.target.checked};
